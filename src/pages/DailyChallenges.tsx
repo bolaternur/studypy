@@ -165,7 +165,7 @@ export const DailyChallenges = () => {
                 </div>
                 <div className="flex-grow text-center md:text-left">
                   <div className="flex flex-wrap justify-center md:justify-start gap-3 mb-3">
-                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-emerald-500/30 text-emerald-400 bg-emerald-500/10">Personal AI</span>
+                    <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-emerald-500/30 text-emerald-400 bg-emerald-500/10">Personal AI</span>
                   </div>
                   <h3 className="text-2xl font-bold mb-2">{aiChallenge.title}</h3>
                   <p className="text-white/50">{aiChallenge.description}</p>
@@ -209,17 +209,17 @@ export const DailyChallenges = () => {
 
                   <div className="flex-grow text-center md:text-left">
                     <div className="flex flex-wrap justify-center md:justify-start gap-3 mb-3">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${challenge.difficulty === 'easy' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : challenge.difficulty === 'medium' ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' : 'border-red-500/30 text-red-400 bg-red-500/10'}`}>
+                      <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border ${challenge.difficulty === 'easy' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : challenge.difficulty === 'medium' ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' : 'border-red-500/30 text-red-400 bg-red-500/10'}`}>
                         {challenge.difficulty || 'medium'}
                       </span>
-                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10 text-white/40">
+                      <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-white/10 text-white/40">
                         {challenge.type || 'code'}
                       </span>
-                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-teal-500/30 text-teal-400 bg-teal-500/10">
+                      <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-teal-500/30 text-teal-400 bg-teal-500/10">
                         Глобальный ИИ-Квест
                       </span>
                       {challenge.recommendedRank && (
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
+                        <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
                           Реком. Ранг: {challenge.recommendedRank}
                         </span>
                       )}
@@ -231,12 +231,12 @@ export const DailyChallenges = () => {
                   <div className="flex flex-col items-center md:items-end gap-4 shrink-0">
                     <div className="flex items-center gap-4">
                       <div className="text-center">
-                        <div className="text-[10px] text-white/40 uppercase tracking-widest mb-1">Опыт</div>
+                        <div className="text-[11px] text-white/40 uppercase tracking-widest mb-1">Опыт</div>
                         <div className="text-xl font-bold text-amber-400">+{xpReward}</div>
                       </div>
                       <div className="w-px h-8 bg-white/10" />
                       <div className="text-center">
-                        <div className="text-[10px] text-white/40 uppercase tracking-widest mb-1">Монеты</div>
+                        <div className="text-[11px] text-white/40 uppercase tracking-widest mb-1">Монеты</div>
                         <div className="text-xl font-bold text-brand-primary">+{coinsReward}</div>
                       </div>
                     </div>
@@ -283,8 +283,8 @@ export const DailyChallenges = () => {
                 
                 <div className="mb-8 max-w-3xl">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="px-3 py-1 bg-brand-primary/20 text-brand-primary font-black uppercase tracking-widest text-[10px] rounded-full border border-brand-primary/30">ИИ-Задание</span>
-                    <span className={`px-3 py-1 font-black uppercase tracking-widest text-[10px] rounded-full border ${activeChallenge.difficulty === 'easy' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : activeChallenge.difficulty === 'hard' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'}`}>{activeChallenge.difficulty || 'medium'}</span>
+                    <span className="px-3 py-1 bg-brand-primary/20 text-brand-primary font-black uppercase tracking-widest text-[11px] rounded-full border border-brand-primary/30">ИИ-Задание</span>
+                    <span className={`px-3 py-1 font-black uppercase tracking-widest text-[11px] rounded-full border ${activeChallenge.difficulty === 'easy' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : activeChallenge.difficulty === 'hard' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'}`}>{activeChallenge.difficulty || 'medium'}</span>
                   </div>
                   <h2 className="text-4xl font-black mb-4">{activeChallenge.title}</h2>
                   <p className="text-white/60 text-lg leading-relaxed">{activeChallenge.description}</p>
@@ -318,7 +318,7 @@ export const DailyChallenges = () => {
             <p className="text-white/60 text-lg mb-8 max-w-2xl mx-auto">Выполни все ежедневные глобальные ИИ-задания в течение 7 дней, чтобы получить легендарный сундук с редкими аватарами и званиями!</p>
             <div className="flex justify-center flex-wrap gap-4">
               {[...Array(7)].map((_, i) => (
-                <div key={i} className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl font-bold shadow-lg ${i < 3 ? 'bg-brand-primary border-brand-primary text-white shadow-brand-primary/20' : 'bg-white/5 border-white/10 text-white/20'}`}>
+                <div key={i} className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl font-bold shadow-lg ${i < 3 ? 'bg-brand-primary border-brand-primary text-white shadow-brand-primary/20' : 'bg-white/5 border-white/10 text-white/50'}`}>
                   {i < 3 ? <CheckCircle2 className="w-6 h-6 text-black" /> : i + 1}
                 </div>
               ))}

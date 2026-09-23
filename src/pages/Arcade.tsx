@@ -874,7 +874,7 @@ export const Arcade = () => {
                     </div>
                     <div className="text-xs text-white/40">Доступно: move_up(), move_down(), move_left(), move_right(), attack()</div>
                   </div>
-                  <textarea
+                  <textarea aria-label="Редактор кода"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     disabled={isRunning || gameOver || gameWon}
@@ -1069,7 +1069,7 @@ export const Arcade = () => {
               </div>
 
               <div className="relative z-10">
-                <textarea
+                <textarea aria-label="Начните печатать здесь..."
                   value={typedCode}
                   onChange={handleType}
                   disabled={typerFinished}
@@ -1220,7 +1220,7 @@ export const Arcade = () => {
                             className="absolute inset-0 w-full h-full bg-white/5 border border-white/10 rounded-xl flex items-center justify-center"
                             style={{ backfaceVisibility: 'hidden' }}
                           >
-                            <Blocks className="w-8 h-8 text-white/20" />
+                            <Blocks className="w-8 h-8 text-white/50" />
                           </div>
                           
                           {}
@@ -1535,14 +1535,14 @@ const PythonSnakeGame = () => {
               ))}
             </div>
             <form onSubmit={handleCommand} className="mt-6 relative">
-              <input
+              <input aria-label="Команда"
                 type="text"
                 value={command}
                 onChange={(e) => setCommand(e.target.value)}
                 placeholder="snake.move_up()..."
                 className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 font-mono text-emerald-400 focus:outline-none focus:border-emerald-500/50 transition-all"
               />
-              <Code2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
+              <Code2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
             </form>
           </div>
 
@@ -1552,10 +1552,10 @@ const PythonSnakeGame = () => {
               <div className="text-3xl font-bold text-emerald-400">{score}</div>
             </div>
             <div className="space-y-3">
-              <div className="text-[10px] text-white/20 uppercase tracking-widest mb-2">Доступные команды:</div>
+              <div className="text-[11px] text-white/50 uppercase tracking-widest mb-2">Доступные команды:</div>
               <div className="grid grid-cols-2 gap-2">
                 {['move_up()', 'move_down()', 'move_left()', 'move_right()'].map(cmd => (
-                  <code key={cmd} className="bg-white/5 p-2 rounded-lg text-[10px] text-emerald-400/60 text-center">snake.{cmd}</code>
+                  <code key={cmd} className="bg-white/5 p-2 rounded-lg text-[11px] text-emerald-400/60 text-center">snake.{cmd}</code>
                 ))}
               </div>
             </div>

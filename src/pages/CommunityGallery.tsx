@@ -64,15 +64,15 @@ const SnippetCard = React.memo(({
             {snippet.authorPhoto ? (
               <img src={snippet.authorPhoto} alt="" className="w-full h-full object-cover" />
             ) : (
-              <User className="w-5 h-5 text-white/20" />
+              <User className="w-5 h-5 text-white/50" />
             )}
           </div>
           <div>
             <div className="text-sm font-bold group-hover/author:text-brand-primary transition-colors">{snippet.authorName}</div>
-            <div className="text-[10px] text-white/30 uppercase font-bold">Автор</div>
+            <div className="text-[11px] text-white/55 uppercase font-bold">Автор</div>
           </div>
         </a>
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] font-bold text-white/40">
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5 text-[11px] font-bold text-white/40">
           <Calendar className="w-3 h-3" />
           {snippet.createdAt?.toDate ? snippet.createdAt.toDate().toLocaleDateString() : 'Недавно'}
         </div>
@@ -83,7 +83,7 @@ const SnippetCard = React.memo(({
 
       <div className="flex flex-wrap gap-2 mb-8">
         {(snippet.tags || []).map(tag => (
-          <span key={tag} className="px-2 py-1 rounded-lg bg-brand-primary/5 border border-brand-primary/10 text-[10px] font-bold text-brand-primary uppercase tracking-wider">
+          <span key={tag} className="px-2 py-1 rounded-lg bg-brand-primary/5 border border-brand-primary/10 text-[11px] font-bold text-brand-primary uppercase tracking-wider">
             #{tag}
           </span>
         ))}
@@ -346,7 +346,7 @@ export const CommunityGallery = () => {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/10 border border-brand-primary/20 text-brand-primary mb-6"
             >
               <Users className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Сообщество</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.2em]">Сообщество</span>
             </motion.div>
             <h1 className="text-6xl font-display font-black mb-6 tracking-tighter">
               Галерея <span className="text-brand-primary italic serif">Кода</span>
@@ -360,21 +360,21 @@ export const CommunityGallery = () => {
             <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
               <button
                 onClick={() => setFilter('latest')}
-                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === 'latest' ? 'bg-brand-primary text-black' : 'text-white/40 hover:text-white'}`}
+                className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${filter === 'latest' ? 'bg-brand-primary text-black' : 'text-white/40 hover:text-white'}`}
               >
                 Последние
               </button>
               <button
                 onClick={() => setFilter('trending')}
-                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === 'trending' ? 'bg-brand-primary text-black' : 'text-white/40 hover:text-white'}`}
+                className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${filter === 'trending' ? 'bg-brand-primary text-black' : 'text-white/40 hover:text-white'}`}
               >
                 🔥 Тренды
               </button>
             </div>
             
             <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-brand-primary transition-colors" />
-              <input
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50 group-focus-within:text-brand-primary transition-colors" />
+              <input aria-label="Поиск..."
                 type="text"
                 placeholder="Поиск..."
                 value={searchTerm}
@@ -442,8 +442,8 @@ export const CommunityGallery = () => {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 ml-2">Название</label>
-                      <input
+                      <label className="block text-[11px] font-black uppercase tracking-widest text-white/40 mb-2 ml-2">Название</label>
+                      <input aria-label="Заголовок"
                         required
                         type="text"
                         value={newSnippet.title}
@@ -453,8 +453,8 @@ export const CommunityGallery = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 ml-2">Описание</label>
-                      <textarea
+                      <label className="block text-[11px] font-black uppercase tracking-widest text-white/40 mb-2 ml-2">Описание</label>
+                      <textarea aria-label="Описание"
                         required
                         rows={3}
                         value={newSnippet.description}
@@ -464,8 +464,8 @@ export const CommunityGallery = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 ml-2">Теги (через запятую)</label>
-                      <input
+                      <label className="block text-[11px] font-black uppercase tracking-widest text-white/40 mb-2 ml-2">Теги (через запятую)</label>
+                      <input aria-label="Теги"
                         type="text"
                         value={newSnippet.tags}
                         onChange={(e) => setNewSnippet({ ...newSnippet, tags: e.target.value })}
@@ -475,7 +475,7 @@ export const CommunityGallery = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 ml-2">Код (Python)</label>
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-white/40 mb-2 ml-2">Код (Python)</label>
                     <div className="h-[300px] rounded-2xl overflow-hidden border border-white/10">
                       <CodeEditor
                         initialCode={newSnippet.code}
@@ -544,13 +544,13 @@ export const CommunityGallery = () => {
                             {selectedSnippet.authorPhoto ? (
                               <img src={selectedSnippet.authorPhoto} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <User className="w-4 h-4 text-white/20" />
+                              <User className="w-4 h-4 text-white/50" />
                             )}
                           </div>
                           <span className="text-sm font-bold text-white/60">{selectedSnippet.authorName}</span>
                         </div>
                         <div className="w-1 h-1 rounded-full bg-white/20" />
-                        <span className="text-xs font-bold text-white/30 uppercase tracking-widest">
+                        <span className="text-xs font-bold text-white/55 uppercase tracking-widest">
                           {selectedSnippet.createdAt?.toDate ? selectedSnippet.createdAt.toDate().toLocaleDateString() : 'Недавно'}
                         </span>
                       </div>
@@ -560,7 +560,7 @@ export const CommunityGallery = () => {
                         onClick={() => handleLike(selectedSnippet.id)}
                         className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-red-500/50 transition-all group"
                       >
-                        <Heart className={`w-6 h-6 ${selectedSnippet.likes > 0 ? 'fill-red-400 text-red-400' : 'text-white/20 group-hover:text-red-400'}`} />
+                        <Heart className={`w-6 h-6 ${selectedSnippet.likes > 0 ? 'fill-red-400 text-red-400' : 'text-white/50 group-hover:text-red-400'}`} />
                       </button>
                       <button
                         type="button"
@@ -568,7 +568,7 @@ export const CommunityGallery = () => {
                         aria-label="Скопировать ссылку на решение"
                         className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-emerald-400/50 transition-all group"
                       >
-                        <Share2 className="w-6 h-6 text-white/20 group-hover:text-emerald-300" aria-hidden="true" />
+                        <Share2 className="w-6 h-6 text-white/50 group-hover:text-emerald-300" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -588,7 +588,7 @@ export const CommunityGallery = () => {
 
                     <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                       {comments.length === 0 ? (
-                        <div className="text-center py-8 text-white/30 text-sm font-bold uppercase tracking-widest border border-dashed border-white/10 rounded-2xl">
+                        <div className="text-center py-8 text-white/55 text-sm font-bold uppercase tracking-widest border border-dashed border-white/10 rounded-2xl">
                           Пока нет комментариев. Напишите первым!
                         </div>
                       ) : (
@@ -598,13 +598,13 @@ export const CommunityGallery = () => {
                               {comment.authorPhoto ? (
                                 <img src={comment.authorPhoto} alt="" className="w-full h-full object-cover" />
                               ) : (
-                                <User className="w-5 h-5 text-white/20" />
+                                <User className="w-5 h-5 text-white/50" />
                               )}
                             </div>
                             <div className="flex-grow">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-bold text-sm text-white/80">{comment.authorName}</span>
-                                <span className="text-[10px] text-white/30 uppercase tracking-widest">
+                                <span className="text-[11px] text-white/55 uppercase tracking-widest">
                                   {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleDateString() : 'Только что'}
                                 </span>
                               </div>
@@ -616,7 +616,7 @@ export const CommunityGallery = () => {
                     </div>
 
                     <form onSubmit={handlePostComment} className="flex gap-3 relative">
-                      <input
+                      <input aria-label="Комментарий"
                         type="text"
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
@@ -673,12 +673,12 @@ export const CommunityGallery = () => {
                       className="p-6 rounded-[24px] bg-emerald-500/10 border border-emerald-500/20 text-center"
                     >
                       <div className="text-emerald-400 font-black text-xs uppercase tracking-widest mb-2">Сессия активна</div>
-                      <div className="text-[10px] text-white/40 mb-4">Отправь ссылку другу для входа</div>
+                      <div className="text-[11px] text-white/40 mb-4">Отправь ссылку другу для входа</div>
                       <div className="flex gap-2">
-                        <input 
+                        <input aria-label="Ссылка на песочницу" 
                           readOnly 
                           value={`${window.location.origin}/sandbox/${selectedSnippet.id}`}
-                          className="flex-grow bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-[10px] font-mono text-white/60"
+                          className="flex-grow bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-[11px] font-mono text-white/60"
                         />
                         <button 
                           onClick={() => {

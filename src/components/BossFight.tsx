@@ -124,10 +124,10 @@ export const BossFight = ({ bossName, bossHp, challenge, expectedOutput, onVicto
 
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-red-500/20 to-amber-500/20 rounded-3xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <textarea
+            <textarea aria-label="Редактор кода"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="relative w-full h-48 bg-black/80 border-2 border-white/10 rounded-3xl p-6 font-mono text-lg focus:outline-none focus:border-red-500/50 transition-all placeholder:text-white/20 text-teal-300 shadow-inner"
+              className="relative w-full h-48 bg-black/80 border-2 border-white/10 rounded-3xl p-6 font-mono text-lg focus:outline-none focus:border-red-500/50 transition-all placeholder:text-white/50 text-teal-300 shadow-inner"
               placeholder="# Введите ваш код здесь..."
               spellCheck="false"
             />

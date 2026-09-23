@@ -162,17 +162,17 @@ export const Guilds = () => {
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="p-4 rounded-3xl bg-white/5 border border-white/10 text-center">
-                    <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1">Опыт Гильдии</div>
+                    <div className="text-white/40 text-[11px] uppercase tracking-widest mb-1">Опыт Гильдии</div>
                     <div className="text-2xl font-black text-brand-primary font-mono">{myGuild.xp} XP</div>
                   </div>
                   <div className="p-4 rounded-3xl bg-white/5 border border-white/10 text-center">
-                    <div className="text-white/40 text-[10px] uppercase tracking-widest mb-1">Требуемый Уровень</div>
+                    <div className="text-white/40 text-[11px] uppercase tracking-widest mb-1">Требуемый Уровень</div>
                     <div className="text-2xl font-black">{myGuild.requiredLevel}</div>
                   </div>
                   <div className="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-center lg:col-span-2 flex items-center justify-center gap-3">
                     <Sparkles className="w-6 h-6 text-emerald-400 animate-pulse" />
                     <div>
-                       <div className="text-emerald-500/60 text-[10px] uppercase tracking-widest font-black">Бонус Гильдии</div>
+                       <div className="text-emerald-500/60 text-[11px] uppercase tracking-widest font-black">Бонус Гильдии</div>
                        <div className="text-emerald-400 font-bold text-sm">+5% Опыта за уроки всем участникам</div>
                     </div>
                   </div>
@@ -189,7 +189,7 @@ export const Guilds = () => {
                           </div>
                           <div>
                             <span className="font-bold flex items-center gap-2">{member.username} {member.role === 'leader' && <Trophy className="w-3 h-3 text-amber-500" />}</span>
-                            <span className="text-[10px] text-white/40 uppercase tracking-widest block mt-0.5">Вклад: {member.contribution} XP</span>
+                            <span className="text-[11px] text-white/40 uppercase tracking-widest block mt-0.5">Вклад: {member.contribution} XP</span>
                           </div>
                         </div>
                       </div>
@@ -253,7 +253,7 @@ export const Guilds = () => {
                   <button 
                     onClick={() => handleJoinGuild(guild.id)}
                     disabled={isLoading || (userProfile?.level || 0) < guild.requiredLevel}
-                    className="w-full py-4 bg-white/5 text-white font-black rounded-2xl text-[10px] uppercase tracking-[0.2em] hover:bg-brand-primary hover:text-black transition-all disabled:opacity-30 flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-white/5 text-white font-black rounded-2xl text-[11px] uppercase tracking-[0.2em] hover:bg-brand-primary hover:text-black transition-all disabled:opacity-30 flex items-center justify-center gap-2"
                   >
                     Вступить <ArrowRight className="w-3 h-3" />
                   </button>
@@ -284,7 +284,7 @@ export const Guilds = () => {
               <form onSubmit={handleCreateGuild} className="space-y-6">
                 <div>
                   <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-3">Название (Макс. 20 симв.)</label>
-                  <input
+                  <input aria-label="Название гильдии"
                     type="text"
                     required
                     maxLength={20}
@@ -311,7 +311,7 @@ export const Guilds = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-3">Описание (Манифест)</label>
-                  <textarea
+                  <textarea aria-label="Описание гильдии"
                     required
                     maxLength={150}
                     value={newGuildDesc}

@@ -133,7 +133,7 @@ const MemoryVisualizer = () => {
                   className="w-20 h-20 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center font-mono text-2xl font-bold relative"
                 >
                   10
-                  <span className="absolute -bottom-6 text-[10px] text-white/30 whitespace-nowrap">id: 43901</span>
+                  <span className="absolute -bottom-6 text-[11px] text-white/55 whitespace-nowrap">id: 43901</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -145,7 +145,7 @@ const MemoryVisualizer = () => {
                   className="w-20 h-20 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center font-mono text-2xl font-bold relative"
                 >
                   20
-                  <span className="absolute -bottom-6 text-[10px] text-white/30 whitespace-nowrap">id: 43933</span>
+                  <span className="absolute -bottom-6 text-[11px] text-white/55 whitespace-nowrap">id: 43933</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -355,7 +355,7 @@ export const DataVessels = () => {
         <motion.div 
           animate={{ y: [0, 10, 0] }}
           transition={{ repeat: Infinity, duration: 2 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 text-white/30 flex flex-col items-center gap-2"
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 text-white/55 flex flex-col items-center gap-2"
         >
           <span className="text-xs uppercase tracking-widest font-bold">Прокрутите, чтобы начать</span>
           <ChevronDown className="w-5 h-5" />

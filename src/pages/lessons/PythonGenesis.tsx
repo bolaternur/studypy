@@ -145,13 +145,13 @@ const InteractiveTerminal = ({ expectedOutput, hint, successMsg, onComplete }: {
         {!isSuccess && (
           <div className="flex items-center gap-2 mt-2">
             <span className="text-brand-primary">{'>>>'}</span>
-            <input 
+            <input aria-label="Ввод для программы" 
               type="text" 
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleRun()}
               disabled={isTyping}
-              className="flex-1 bg-transparent outline-none text-white/90 placeholder:text-white/20 disabled:opacity-50"
+              className="flex-1 bg-transparent outline-none text-white/90 placeholder:text-white/50 disabled:opacity-50"
               placeholder='Попробуйте ввести: print("Hello, World!")'
               autoComplete="off"
               spellCheck="false"
@@ -493,7 +493,7 @@ export const PythonGenesis = () => {
         <motion.div 
           animate={{ y: [0, 10, 0] }}
           transition={{ repeat: Infinity, duration: 2 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 text-white/30 flex flex-col items-center gap-2"
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 text-white/55 flex flex-col items-center gap-2"
         >
           <span className="text-xs uppercase tracking-widest font-bold">Листайте, чтобы начать</span>
           <ChevronDown className="w-5 h-5" />
@@ -587,12 +587,12 @@ export const PythonGenesis = () => {
                     <FileCode className="w-6 h-6 mx-auto mb-2 text-teal-400" />
                     Исходный код<br/>(.py)
                   </div>
-                  <div className="hidden md:flex items-center text-white/20"><ArrowRight /></div>
+                  <div className="hidden md:flex items-center text-white/50"><ArrowRight /></div>
                   <div className="flex-1 p-4 bg-black/40 rounded-xl border border-white/5 text-center">
                     <Cpu className="w-6 h-6 mx-auto mb-2 text-emerald-400" />
                     Компилятор<br/>(Байт-код .pyc)
                   </div>
-                  <div className="hidden md:flex items-center text-white/20"><ArrowRight /></div>
+                  <div className="hidden md:flex items-center text-white/50"><ArrowRight /></div>
                   <div className="flex-1 p-4 bg-black/40 rounded-xl border border-white/5 text-center">
                     <MonitorPlay className="w-6 h-6 mx-auto mb-2 text-emerald-400" />
                     PVM<br/>(Виртуальная машина)

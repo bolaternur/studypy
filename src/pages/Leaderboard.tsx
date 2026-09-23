@@ -30,7 +30,7 @@ const LeaderboardRow = React.memo(({ user, index, onClick }: { user: UserProfile
         ) : index === 2 ? (
           <span className="text-amber-600">🥉</span>
         ) : (
-          <span className="text-white/20">{index + 1}</span>
+          <span className="text-white/50">{index + 1}</span>
         )}
       </div>
       
@@ -52,7 +52,7 @@ const LeaderboardRow = React.memo(({ user, index, onClick }: { user: UserProfile
           <div className="font-bold text-lg group-hover:text-brand-primary transition-colors">
             {user.username}
           </div>
-          <div className="text-[10px] text-white/30 uppercase tracking-widest font-mono">
+          <div className="text-[11px] text-white/55 uppercase tracking-widest font-mono">
             {user.role === 'admin' ? 'Системный Админ' : 'Кодер'}
           </div>
         </div>
@@ -141,7 +141,7 @@ export const Leaderboard = () => {
         </div>
 
         <div className="glass rounded-[2rem] overflow-hidden border-white/5 shadow-2xl">
-          <div className="grid grid-cols-12 gap-4 p-6 border-b border-white/5 bg-white/5 text-[10px] uppercase tracking-[0.2em] font-bold text-white/30">
+          <div className="grid grid-cols-12 gap-4 p-6 border-b border-white/5 bg-white/5 text-[11px] uppercase tracking-[0.2em] font-bold text-white/55">
             <div className="col-span-1 text-center">#</div>
             <div className="col-span-6">Игрок</div>
             <div className="col-span-2 text-center">Уровень</div>
@@ -150,11 +150,11 @@ export const Leaderboard = () => {
 
           <div className="divide-y divide-white/5">
             {loading ? (
-              <div className="p-20 text-center text-white/20 font-mono animate-pulse">
+              <div className="p-20 text-center text-white/50 font-mono animate-pulse">
                 Загрузка данных из матрицы...
               </div>
             ) : topUsers.length === 0 ? (
-              <div className="p-20 text-center text-white/20 font-mono">
+              <div className="p-20 text-center text-white/50 font-mono">
                 Пока никого нет. Будь первым!
               </div>
             ) : (

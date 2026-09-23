@@ -76,7 +76,7 @@ export const SkillTree = React.memo(() => {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/10 border border-brand-primary/20 text-brand-primary mb-6"
             >
               <Brain className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Дерево навыков</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.2em]">Дерево навыков</span>
             </motion.div>
             <h1 className="text-6xl font-display font-black mb-6 tracking-tighter">
               Перки и <span className="text-brand-primary italic serif">Способности</span>
@@ -91,7 +91,7 @@ export const SkillTree = React.memo(() => {
               <Star className="w-6 h-6 text-brand-primary fill-brand-primary" />
             </div>
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Доступные очки</div>
+              <div className="text-[11px] font-black uppercase tracking-widest text-white/55 mb-1">Доступные очки</div>
               <div className="text-3xl font-black text-brand-primary font-mono">{skillPoints} SP</div>
             </div>
           </div>
@@ -150,7 +150,7 @@ export const SkillTree = React.memo(() => {
                     {isUnlocked ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     ) : (
-                      <div className="px-3 py-1 rounded-lg bg-black/50 border border-white/10 text-[10px] font-black text-brand-primary uppercase tracking-widest">
+                      <div className="px-3 py-1 rounded-lg bg-black/50 border border-white/10 text-[11px] font-black text-brand-primary uppercase tracking-widest">
                         {perk.cost} SP
                       </div>
                     )}
@@ -165,7 +165,7 @@ export const SkillTree = React.memo(() => {
 
                   <div className="flex flex-wrap gap-2 relative z-10">
                     {perk.requirements.map(req => (
-                      <span key={req.stat} className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${
+                      <span key={req.stat} className={`px-2 py-1 rounded-md text-[11px] font-black uppercase tracking-widest border ${
                         getStatValue(req.stat) >= req.min
                           ? 'border-emerald-500/20 text-emerald-500 bg-emerald-500/5' 
                           : 'border-red-500/20 text-red-500 bg-red-500/5'
@@ -201,7 +201,7 @@ export const SkillTree = React.memo(() => {
                     </div>
                     <div>
                       <h2 className="text-2xl 2xl:text-3xl font-black mb-1 tracking-tight leading-none">{selectedPerk.name}</h2>
-                      <p className="text-brand-primary/60 font-black uppercase text-[10px] tracking-widest">Пассивная способность</p>
+                      <p className="text-brand-primary/60 font-black uppercase text-[11px] tracking-widest">Пассивная способность</p>
                     </div>
                   </div>
 
@@ -211,12 +211,12 @@ export const SkillTree = React.memo(() => {
 
                   <div className="space-y-4 mb-10">
                     <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
-                      <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Стоимость</span>
+                      <span className="text-[11px] font-black text-white/40 uppercase tracking-widest">Стоимость</span>
                       <span className="text-xl font-black text-brand-primary font-mono">{selectedPerk.cost} SP</span>
                     </div>
                     <div className="p-6 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 relative overflow-hidden">
                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/20 blur-2xl rounded-full" />
-                       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 block mb-2">ЭФФЕКТ ПЕРКА</span>
+                       <span className="text-[11px] font-black uppercase tracking-widest text-emerald-500 block mb-2">ЭФФЕКТ ПЕРКА</span>
                        <div className="text-xl 2xl:text-2xl font-black text-emerald-400 relative z-10">
                           {selectedPerk.bonus.type === 'coins' && `+${Math.round(selectedPerk.bonus.value * 100)}% Монет`}
                           {selectedPerk.bonus.type === 'xp' && `+${Math.round(selectedPerk.bonus.value * 100)}% XP`}

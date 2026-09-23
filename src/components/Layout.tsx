@@ -256,7 +256,7 @@ export const Navbar = () => {
             className="px-6 py-0.5 glass rounded-b-xl border-b border-x border-white/10 flex flex-col items-center pointer-events-none shadow-[0_10px_30px_rgba(0,0,0,0.8)] bg-[#04070a]/90 backdrop-blur-md"
           >
             <ChevronDown className="w-5 h-5 text-brand-primary animate-bounce mt-1" />
-            <span className="text-[9px] font-black tracking-[0.2em] text-white/50 uppercase pb-1">Главное МЕНЮ</span>
+            <span className="text-[11px] font-black tracking-[0.2em] text-white/50 uppercase pb-1">Главное МЕНЮ</span>
           </motion.div>
         </div>
       )}
@@ -364,7 +364,7 @@ export const Navbar = () => {
                   <div className="flex flex-col gap-1 min-w-[120px]">
                     <div className="flex items-center gap-2 px-3 2xl:px-4 py-2 bg-brand-primary/10 border border-brand-primary/20 rounded-full text-brand-primary">
                       <Zap className="w-3.5 h-3.5" />
-                      <span className="text-[10px] 2xl:text-xs font-black">{userProfile.xp} XP / Lvl {userProfile.level}</span>
+                      <span className="text-[11px] 2xl:text-xs font-black">{userProfile.xp} XP / Lvl {userProfile.level}</span>
                     </div>
                     {}
                     <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -378,7 +378,7 @@ export const Navbar = () => {
 
                   <div className="flex items-center gap-2 px-3 2xl:px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500">
                     <Coins className="w-3.5 h-3.5" />
-                    <span className="text-[10px] 2xl:text-xs font-black">{userProfile.coins || 0}</span>
+                    <span className="text-[11px] 2xl:text-xs font-black">{userProfile.coins || 0}</span>
                   </div>
                 </div>
 
@@ -486,7 +486,7 @@ export const Navbar = () => {
               <div className="space-y-6">
                 {navGroups.map((group) => (
                   <div key={group.id} className="space-y-3">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 px-4 flex items-center gap-2">
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/55 px-4 flex items-center gap-2">
                       {group.icon} {group.label}
                     </h3>
                     <div className="grid grid-cols-1 gap-2">
@@ -588,7 +588,7 @@ export const Navbar = () => {
               <form onSubmit={handleAuth} className="flex flex-col gap-4">
                 <div>
                   <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Никнейм</label>
-                  <input 
+                  <input aria-label="Никнейм" 
                     type="text" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -601,7 +601,7 @@ export const Navbar = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Пароль</label>
-                  <input 
+                  <input aria-label="Пароль" 
                     type="password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -779,7 +779,7 @@ const ProfileModal = ({ onClose }: { onClose: () => void }) => {
         <form onSubmit={handleSave} className="space-y-6">
             <div className="col-span-3 p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
               <div className="flex justify-between items-center">
-                <div className="text-white/40 text-[10px] uppercase tracking-widest">Прогресс Ранга</div>
+                <div className="text-white/40 text-[11px] uppercase tracking-widest">Прогресс Ранга</div>
                 <div className={`text-sm font-black bg-gradient-to-br ${getRankColor(calculateRank(userProfile?.level || 1))} bg-clip-text text-transparent`}>
                   {calculateRank(userProfile?.level || 1)}
                 </div>
@@ -791,7 +791,7 @@ const ProfileModal = ({ onClose }: { onClose: () => void }) => {
                   className={`h-full bg-gradient-to-r ${getRankColor(calculateRank(userProfile?.level || 1))}`}
                 />
               </div>
-              <div className="flex justify-between text-[8px] font-bold text-white/20 uppercase tracking-widest">
+              <div className="flex justify-between text-[11px] font-bold text-white/50 uppercase tracking-widest">
                 <span>LVL {userProfile?.level}</span>
                 <span>След. ранг: {getRankProgress(userProfile?.level || 1).toFixed(0)}%</span>
               </div>
@@ -817,7 +817,7 @@ const ProfileModal = ({ onClose }: { onClose: () => void }) => {
               >
                 <Camera className="w-4 h-4 text-white/40" />
               </button>
-              <input 
+              <input aria-label="Загрузить изображение профиля" 
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileChange} 
@@ -832,7 +832,7 @@ const ProfileModal = ({ onClose }: { onClose: () => void }) => {
 
           <div>
             <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Никнейм</label>
-            <input 
+            <input aria-label="Никнейм" 
               type="text" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -842,7 +842,7 @@ const ProfileModal = ({ onClose }: { onClose: () => void }) => {
 
           <div>
             <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">О себе</label>
-            <textarea 
+            <textarea aria-label="О себе" 
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={3}
@@ -856,7 +856,7 @@ const ProfileModal = ({ onClose }: { onClose: () => void }) => {
               <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Инвентарь</label>
               <div className="flex flex-wrap gap-2">
                 {userProfile.inventory.map(item => (
-                  <div key={item.id} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white/60 font-bold uppercase tracking-wider">
+                  <div key={item.id} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white/60 font-bold uppercase tracking-wider">
                     {item.name}
                   </div>
                 ))}

@@ -198,7 +198,7 @@ export const Duel = () => {
                   </div>
                   <div>
                     <div className="text-sm font-bold">{userProfile?.username || 'Вы'}</div>
-                    <div className="text-[10px] text-white/40 uppercase tracking-widest">Твой код</div>
+                    <div className="text-[11px] text-white/40 uppercase tracking-widest">Твой код</div>
                   </div>
                 </div>
                 <div className="text-2xl font-mono font-bold text-red-400">{timeLeft}с</div>
@@ -237,7 +237,7 @@ export const Duel = () => {
                   </div>
                   <div>
                     <div className="text-sm font-bold">{opponent?.username}</div>
-                    <div className="text-[10px] text-white/40 uppercase tracking-widest">Код противника</div>
+                    <div className="text-[11px] text-white/40 uppercase tracking-widest">Код противника</div>
                   </div>
                 </div>
               </div>
@@ -245,11 +245,11 @@ export const Duel = () => {
               <div className="glass rounded-[40px] border border-white/10 overflow-hidden flex flex-col flex-grow bg-black/40 opacity-60">
                 <div className="bg-black/40 px-8 py-4 border-b border-white/5">
                   <div className="flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-white/20" />
-                    <span className="text-xs font-bold text-white/20 tracking-widest uppercase">opponent_script.py</span>
+                    <Terminal className="w-4 h-4 text-white/50" />
+                    <span className="text-xs font-bold text-white/50 tracking-widest uppercase">opponent_script.py</span>
                   </div>
                 </div>
-                <pre className="flex-grow w-full p-8 font-mono text-lg text-white/20 overflow-hidden">
+                <pre className="flex-grow w-full p-8 font-mono text-lg text-white/50 overflow-hidden">
                   {opponentCode || "# Противник еще не начал писать..."}
                 </pre>
               </div>

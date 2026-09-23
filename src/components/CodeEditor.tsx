@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { TestCase } from '../constants/lessons';
 import { CodeVisualizer } from './CodeVisualizer';
+import { GUARD_LINE_OFFSET, PYTHON_GUARD_SETUP, guarded } from '../constants/python-guard';
 import { playSound } from '../utils/sounds';
 
 function debounce(fn: Function, ms: number) {
@@ -56,6 +57,68 @@ const loadPyodideRuntime = (): Promise<any> => {
   });
 
   return pyodideLoadPromise;
+};
+
+/**
+ * Turns a failed run into one line a learner can act on.
+ *
+ * `traceback` is what the Python-side guard recorded at raise time; its
+ * last non-empty line is the exception type and message, which is the part
+ * that matters. Frame lines are mined for a line number, since learner code
+ * executes under the name "<exec>".
+ *
+ * Pyodide's own error object is close to useless here — in 0.26 its
+ * `message` is empty — so it only supplies the exception class as a
+ * last resort.
+ */
+const describePythonError = (error: unknown, traceback?: string | null): string => {
+  const text = (traceback ?? '').trim();
+
+  if (text) {
+    const lines = text.split('\n').filter((line) => line.trim().length > 0);
+    const summary = lines[lines.length - 1];
+
+    // `<string>` frames come from exec()-ing the learner's source directly, so
+    // their numbering is already theirs and they always win. `<exec>` frames
+    // belong to the generated wrapper and are only a fallback — the watchdog
+    // itself raises from one, which would otherwise report its own line
+    // instead of the loop the learner wrote.
+    const direct: number[] = [];
+    const wrapped: number[] = [];
+    for (const line of lines) {
+      const fromString = /File "<string>", line (\d+)/.exec(line);
+      if (fromString) {
+        direct.push(Number(fromString[1]));
+        continue;
+      }
+      const fromExec = /File "<exec>", line (\d+)/.exec(line);
+      if (fromExec) wrapped.push(Number(fromExec[1]) - GUARD_LINE_OFFSET);
+    }
+
+    const candidate = direct.length > 0
+      ? direct[direct.length - 1]
+      : wrapped.filter((value) => value > 0).pop() ?? null;
+    const lineNumber = candidate && candidate > 0 ? candidate : null;
+
+    if (summary) {
+      return lineNumber ? `${summary} (строка ${lineNumber})` : summary;
+    }
+  }
+
+  const pythonType = (error as { type?: unknown } | null)?.type;
+  if (typeof pythonType === 'string' && pythonType) return pythonType;
+
+  return error instanceof Error && error.message ? error.message : 'Ошибка выполнения';
+};
+
+/** Reads the traceback the guard recorded, if the runtime is still usable. */
+const readRecordedTraceback = async (pyodide: any): Promise<string | null> => {
+  try {
+    const value = await pyodide.runPythonAsync('_sp_last_error');
+    return typeof value === 'string' ? value : null;
+  } catch {
+    return null;
+  }
 };
 
 interface CodeEditorProps {
@@ -175,12 +238,14 @@ class _MockInput:
         _pending_output = sys.stdout.getvalue()
         raise _NeedsInput()
 
-sys.stdout = io.StringIO()
-sys.stderr = io.StringIO()
+${PYTHON_GUARD_SETUP}
+
+sys.stdout = _SpBoundedOut()
+sys.stderr = _SpBoundedOut()
 builtins.input = _MockInput(${inputJson})
 
 _user_code = base64.b64decode("${encodedCode}").decode("utf-8")
-exec(_user_code, {"__name__": "__main__", "__builtins__": builtins})
+${guarded('exec(_user_code, {"__name__": "__main__", "__builtins__": builtins})')}
 `);
       const finalOut: string = await pyodide.runPythonAsync('sys.stdout.getvalue()');
       const lines = finalOut.trimEnd().split('\n');
@@ -188,7 +253,7 @@ exec(_user_code, {"__name__": "__main__", "__builtins__": builtins})
       setPendingPrompt(null);
       setIsRunning(false);
       if (onSuccess) onSuccess();
-    } catch {
+    } catch (runtimeError: unknown) {
       
       let pr: string | null = null;
       let out = '';
@@ -207,8 +272,10 @@ exec(_user_code, {"__name__": "__main__", "__builtins__": builtins})
         setIsRunning(false);
       } else {
         
-        let errLine = 'Ошибка выполнения';
-        try { errLine = await pyodide.runPythonAsync('import traceback; traceback.format_exc().strip().split("\\n")[-1]') as string; } catch {  }
+        // Pyodide attaches the formatted Python traceback to the error it
+        // throws. Reading it there works; asking Python afterwards does not,
+        // because the exception is no longer active by then.
+        const errLine = describePythonError(runtimeError, await readRecordedTraceback(pyodide));
         setTerminalLines(prev => [...prev, { type: 'output', text: '' }, { type: 'output', text: '❌ ' + errLine }]);
         setPendingPrompt(null);
         setIsRunning(false);
@@ -286,13 +353,17 @@ exec(_user_code, {"__name__": "__main__", "__builtins__": builtins})
           await pyodide.runPythonAsync('globals().clear()');
           
           const inputValuesList = test.inputValues ? JSON.stringify(test.inputValues) : '[]';
+          // The guards are (re)defined here because globals().clear() above
+          // wipes them along with everything else from the previous case.
           await pyodide.runPythonAsync(`
 import sys
 import io
 import builtins
 
-sys.stdout = io.StringIO()
-sys.stderr = io.StringIO()
+${PYTHON_GUARD_SETUP}
+
+sys.stdout = _SpBoundedOut()
+sys.stderr = _SpBoundedOut()
 
 class MockInput:
     def __init__(self, inputs):
@@ -310,15 +381,16 @@ builtins.input = MockInput(${inputValuesList})
           `);
 
           
-          await pyodide.runPythonAsync(code);
-          
-          
+          // Learner code and any assertions run under the watchdog: a test
+          // case containing an infinite loop must fail, not hang the tab.
+          await pyodide.runPythonAsync(guarded(code));
+
           if ((test as any).input) {
-             await pyodide.runPythonAsync((test as any).input);
+             await pyodide.runPythonAsync(guarded((test as any).input));
           }
 
           if (test.assertCode) {
-             await pyodide.runPythonAsync(test.assertCode);
+             await pyodide.runPythonAsync(guarded(test.assertCode));
           }
           
           
@@ -364,19 +436,7 @@ builtins.input = MockInput(${inputValuesList})
       allPassed = false;
       
       
-      let lineInfo = '';
-      try {
-        const tb = await pyodide.runPythonAsync('import traceback; traceback.format_exc()') as string;
-        const lines = tb.split('\n');
-        for (const line of lines) {
-          if (line.includes('File "<exec>", line ')) {
-             const match = line.match(/line (\d+)/);
-             if (match) lineInfo = ` (Строка ${match[1]})`;
-          }
-        }
-      } catch {  }
-
-      const errMsg = `Ошибка: ${err.message}${lineInfo}`;
+      const errMsg = `Ошибка: ${describePythonError(err, await readRecordedTraceback(pyodide))}`;
       results.push({ passed: false, message: errMsg });
       setTestResults(results);
       
@@ -430,7 +490,7 @@ builtins.input = MockInput(${inputValuesList})
             <button
               onClick={() => setIsVisualizerOpen(true)}
               disabled={isRunning || !pyodide}
-              className="flex items-center gap-2 bg-teal-600/20 hover:bg-teal-600/30 text-teal-400 px-4 py-1.5 rounded-lg text-[10px] md:text-sm font-black uppercase tracking-widest transition-all border border-teal-500/30"
+              className="flex items-center gap-2 bg-teal-600/20 hover:bg-teal-600/30 text-teal-400 px-4 py-1.5 rounded-lg text-[11px] md:text-sm font-black uppercase tracking-widest transition-all border border-teal-500/30"
             >
               <Eye className="w-4 h-4" />
               <span className="hidden sm:inline">Trace</span>
@@ -438,7 +498,7 @@ builtins.input = MockInput(${inputValuesList})
             <button
               onClick={runTests}
               disabled={isRunning || !pyodide}
-              className="flex items-center gap-2 bg-brand-primary text-black px-4 py-1.5 rounded-lg text-[10px] md:text-sm font-black uppercase tracking-widest transition-all hover:scale-105"
+              className="flex items-center gap-2 bg-brand-primary text-black px-4 py-1.5 rounded-lg text-[11px] md:text-sm font-black uppercase tracking-widest transition-all hover:scale-105"
             >
               {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               <span>{isRunning ? '...' : (testCases.length > 0 ? 'Проверить' : 'Запустить')}</span>
@@ -457,7 +517,7 @@ builtins.input = MockInput(${inputValuesList})
             loading={
               <div className="flex flex-col items-center justify-center h-full gap-4 bg-[#12191d]">
                 <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
-                <div className="text-white/20 font-mono text-xs animate-pulse">Инициализация редактора...</div>
+                <div className="text-white/50 font-mono text-xs animate-pulse">Инициализация редактора...</div>
               </div>
             }
             options={{
@@ -529,12 +589,12 @@ builtins.input = MockInput(${inputValuesList})
             </button>
           </div>
           {pendingPrompt !== null && (
-            <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest animate-pulse">
+            <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-widest animate-pulse">
               ⬤ WAITING FOR INPUT
             </span>
           )}
           {isRunning && pendingPrompt === null && (
-            <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest animate-pulse">
+            <span className="text-[11px] font-mono text-amber-400 uppercase tracking-widest animate-pulse">
               ⬤ RUNNING
             </span>
           )}
@@ -551,7 +611,7 @@ builtins.input = MockInput(${inputValuesList})
                 className="p-6 h-full font-mono text-sm overflow-y-auto custom-scrollbar flex flex-col gap-0.5"
               >
                 {terminalLines.length === 0 && pendingPrompt === null && !isRunning && (
-                  <span className="text-white/20 italic text-xs">Run code to see output...</span>
+                  <span className="text-white/50 italic text-xs">Run code to see output...</span>
                 )}
                 {terminalLines.map((line, i) => (
                   <div key={i} className={`leading-snug whitespace-pre-wrap ${line.type === 'input' ? 'text-emerald-400' : 'text-gray-300'}`}>
@@ -561,7 +621,7 @@ builtins.input = MockInput(${inputValuesList})
                 {pendingPrompt !== null && (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-emerald-400 whitespace-pre">{pendingPrompt}</span>
-                    <input
+                    <input aria-label="Ввод для программы"
                       ref={inputDraftRef}
                       type="text"
                       value={inputDraft}
@@ -574,7 +634,7 @@ builtins.input = MockInput(${inputValuesList})
                       className="flex-1 bg-transparent border-none outline-none text-emerald-300 caret-emerald-400"
                       autoFocus
                     />
-                    <span className="text-white/20 text-xs">Press Enter ↵</span>
+                    <span className="text-white/50 text-xs">Press Enter ↵</span>
                   </div>
                 )}
                 <div ref={terminalEndRef} />
@@ -598,18 +658,18 @@ builtins.input = MockInput(${inputValuesList})
                     {!res.passed && res.message.includes('Ожидалось') && (
                       <div className="ml-9 p-3 bg-black/40 rounded-xl border border-white/5 space-y-2 font-mono text-xs">
                         <div className="grid grid-cols-[80px_1fr] gap-2">
-                          <span className="text-white/30 uppercase tracking-widest">Expected:</span>
+                          <span className="text-white/55 uppercase tracking-widest">Expected:</span>
                           <span className="text-emerald-400 whitespace-pre-wrap">{res.message.split('Ожидалось \'')[1]?.split('\', получено')[0]}</span>
                         </div>
                         <div className="grid grid-cols-[80px_1fr] gap-2">
-                          <span className="text-white/30 uppercase tracking-widest">Actual:</span>
+                          <span className="text-white/55 uppercase tracking-widest">Actual:</span>
                           <span className="text-red-400 whitespace-pre-wrap">{res.message.split('получено \'')[1]?.replace(/'$/, '')}</span>
                         </div>
                       </div>
                     )}
                   </div>
                 )) : (
-                  <span className="text-white/30 italic text-sm">Run the code to see test results.</span>
+                  <span className="text-white/55 italic text-sm">Run the code to see test results.</span>
                 )}
               </motion.div>
             )}
@@ -637,11 +697,11 @@ builtins.input = MockInput(${inputValuesList})
                         <span className="text-xs font-bold text-white/60">
                           {new Date(sub.timestamp?.toMillis() || Date.now()).toLocaleString()}
                         </span>
-                        <span className="text-[10px] text-white/20 font-mono line-clamp-1">
+                        <span className="text-[11px] text-white/50 font-mono line-clamp-1">
                           {sub.code.substring(0, 100)}...
                         </span>
                       </div>
-                      <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                      <div className={`px-3 py-1 rounded-full text-[11px] font-black uppercase ${
                         sub.results.every((r: any) => r.passed) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-500'
                       }`}>
                         {sub.results.every((r: any) => r.passed) ? 'SUCCESS' : 'FAILED'}
@@ -649,7 +709,7 @@ builtins.input = MockInput(${inputValuesList})
                     </button>
                   ))
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-white/20 gap-2">
+                  <div className="flex flex-col items-center justify-center h-full text-white/50 gap-2">
                     <Clock className="w-8 h-8" />
                     <span className="text-sm italic">История пуста.</span>
                   </div>

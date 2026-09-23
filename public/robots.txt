@@ -1,0 +1,11 @@
+# StudyPy
+User-agent: *
+Allow: /
+
+# Personal and administrative surfaces carry no value for search and
+# should not be indexed.
+Disallow: /admin
+Disallow: /inventory
+Disallow: /u/
+
+Sitemap: /sitemap.xml

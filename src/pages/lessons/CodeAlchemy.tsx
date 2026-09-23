@@ -92,10 +92,10 @@ const InteractiveTerminal = ({ expectedOutput, hint, successMsg, onComplete }: {
         {!isSuccess && (
           <div className="flex items-center gap-2 mt-2">
             <span className="text-brand-primary">{'>>>'}</span>
-            <textarea 
+            <textarea aria-label="Ввод для программы" 
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-white/90 placeholder:text-white/20 resize-none h-20"
+              className="flex-1 bg-transparent outline-none text-white/90 placeholder:text-white/50 resize-none h-20"
               placeholder='def add(a, b): return a + b'
               autoComplete="off"
               spellCheck="false"

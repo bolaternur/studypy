@@ -292,7 +292,7 @@ export const RichLessonDetail = ({ lesson }: { lesson: Lesson }) => {
           style={{ opacity: opacityHeader }}
           className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
         >
-          <span className="text-xs font-bold uppercase tracking-widest text-white/30">Скролльте вниз</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-white/55">Скролльте вниз</span>
           <motion.div 
             animate={{ y: [0, 10, 0] }}
             transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
@@ -314,7 +314,7 @@ export const RichLessonDetail = ({ lesson }: { lesson: Lesson }) => {
           className="hidden xl:block fixed left-6 top-1/2 -translate-y-[45%] z-50 bg-[#04070a]/80 backdrop-blur-3xl border border-white/10 rounded-[2rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.8)] w-72"
         >
           <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-50 rounded-[2rem] pointer-events-none" />
-          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-8 ml-2 relative z-10">Навигация</h3>
+          <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40 mb-8 ml-2 relative z-10">Навигация</h3>
           <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 relative z-10 custom-scrollbar scroll-smooth">
             {lesson.sections?.map((item, idx) => (
               <a 

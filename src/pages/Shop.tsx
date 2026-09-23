@@ -279,7 +279,7 @@ export function Shop() {
                           onClick={() => handleBuy(item)}
                           disabled={isOwned || !canAfford || !!processingId}
                           className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center min-w-[100px] ${
-                            isOwned ? 'bg-white/5 text-white/30' : !canAfford ? 'bg-red-500/10 text-red-500/50' : 'bg-white text-black hover:bg-amber-500 disabled:opacity-50'
+                            isOwned ? 'bg-white/5 text-white/55' : !canAfford ? 'bg-red-500/10 text-red-500/50' : 'bg-white text-black hover:bg-amber-500 disabled:opacity-50'
                           }`}
                         >
                           {processingId === item.id ? (
@@ -313,7 +313,7 @@ export function Shop() {
               
               {marketplaceListings.length === 0 ? (
                 <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                  <Tag className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                  <Tag className="w-12 h-12 text-white/45 mx-auto mb-4" />
                   <p className="text-white/40">На рынке пока пусто. Будьте первым, кто выставит товар!</p>
                 </div>
               ) : (
@@ -369,7 +369,7 @@ export function Shop() {
               
               {!userProfile?.inventory || userProfile.inventory.length === 0 ? (
                 <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                  <ShoppingBag className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                  <ShoppingBag className="w-12 h-12 text-white/45 mx-auto mb-4" />
                   <p className="text-white/40">Ваш инвентарь пуст. Время что-нибудь купить!</p>
                 </div>
               ) : (
@@ -436,14 +436,14 @@ export function Shop() {
                 <div className="space-y-4 mb-8">
                   <div className="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/10">
                     <Coins className="w-6 h-6 text-amber-500" />
-                    <input
+                    <input aria-label="Цена"
                       type="number"
                       value={listPrice}
                       onChange={(e) => setListPrice(parseInt(e.target.value) || 0)}
                       className="bg-transparent text-white text-2xl font-bold outline-none w-full"
                     />
                   </div>
-                  <p className="text-xs text-white/20 italic">Примечание: Предмет будет удален из вашего инвентаря и станет доступен другим игрокам.</p>
+                  <p className="text-xs text-white/50 italic">Примечание: Предмет будет удален из вашего инвентаря и станет доступен другим игрокам.</p>
                 </div>
 
                 <div className="flex gap-4">

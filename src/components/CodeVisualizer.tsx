@@ -144,12 +144,12 @@ json.dumps(visualizer.steps)
                 </div>
                 <div>
                   <h3 className="text-2xl font-black tracking-tight">Визуализатор <span className="text-teal-400 italic serif">Trace</span></h3>
-                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Пошаговое выполнение кода</p>
+                  <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Пошаговое выполнение кода</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-                  <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Шаг</span>
+                  <span className="text-[11px] font-black text-white/55 uppercase tracking-widest">Шаг</span>
                   <span className="text-sm font-black text-teal-400">{currentStepIdx + 1} / {steps.length || 1}</span>
                 </div>
                 <button 
@@ -181,7 +181,7 @@ json.dumps(visualizer.steps)
                         currentStep?.line === i + 1 ? 'bg-teal-500/20 border-l-4 border-teal-500' : 'opacity-60'
                       }`}
                     >
-                      <span className="w-6 text-right text-white/20 select-none">{i + 1}</span>
+                      <span className="w-6 text-right text-white/50 select-none">{i + 1}</span>
                       <pre className="whitespace-pre-wrap">{line || ' '}</pre>
                     </div>
                   ))}
@@ -194,7 +194,7 @@ json.dumps(visualizer.steps)
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 text-white/40">
                     <Variable className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Переменные</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Переменные</span>
                   </div>
                   
                   <div className="grid gap-4">
@@ -207,7 +207,7 @@ json.dumps(visualizer.steps)
                           className="p-4 rounded-2xl bg-white/5 border border-white/5 flex justify-between items-center group hover:border-teal-500/30 transition-all"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-[10px] font-black text-teal-400">
+                            <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-[11px] font-black text-teal-400">
                               {name[0].toUpperCase()}
                             </div>
                             <span className="font-mono text-sm font-bold text-white/80">{name}</span>
@@ -218,7 +218,7 @@ json.dumps(visualizer.steps)
                         </motion.div>
                       ))
                     ) : (
-                      <div className="text-center py-12 text-white/10 italic text-sm">Нет активных переменных</div>
+                      <div className="text-center py-12 text-white/45 italic text-sm">Нет активных переменных</div>
                     )}
                   </div>
                 </div>
@@ -227,7 +227,7 @@ json.dumps(visualizer.steps)
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 text-white/40">
                     <Layers className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Стек вызовов</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Стек вызовов</span>
                   </div>
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/5 font-mono text-xs text-white/40">
                     <div className="flex items-center gap-2 text-teal-400 mb-2">
@@ -243,10 +243,10 @@ json.dumps(visualizer.steps)
             {}
             <div className="p-8 border-t border-white/10 bg-black/40 flex flex-col gap-4">
               <div className="flex items-center gap-4 w-full">
-                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest min-w-[3rem]">
+                <span className="text-[11px] font-black text-white/40 uppercase tracking-widest min-w-[3rem]">
                   Шаг 0
                 </span>
-                <input 
+                <input aria-label="Шаг выполнения" 
                   type="range" 
                   min={0} 
                   max={Math.max(0, steps.length - 1)} 
@@ -257,7 +257,7 @@ json.dumps(visualizer.steps)
                   }}
                   className="w-full h-2 bg-white/10 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-teal-500 [&::-webkit-slider-thumb]:rounded-full cursor-pointer hover:[&::-webkit-slider-thumb]:scale-125 transition-all"
                 />
-                <span className="text-[10px] font-black text-teal-400 uppercase tracking-widest min-w-[3rem] text-right">
+                <span className="text-[11px] font-black text-teal-400 uppercase tracking-widest min-w-[3rem] text-right">
                   Шаг {Math.max(0, steps.length - 1)}
                 </span>
               </div>
@@ -281,7 +281,7 @@ json.dumps(visualizer.steps)
                     }`}
                   >
                     {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                    <span className="text-[10px] font-black uppercase tracking-widest">
+                    <span className="text-[11px] font-black uppercase tracking-widest">
                       {isPlaying ? 'Пауза' : 'Авто'}
                     </span>
                   </button>
@@ -289,20 +289,20 @@ json.dumps(visualizer.steps)
                     <button 
                       onClick={() => { setCurrentStepIdx(prev => Math.max(0, prev - 1)); setIsPlaying(false); }}
                       disabled={currentStepIdx === 0}
-                      className="px-6 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest disabled:opacity-30 transition-all border border-white/5"
+                      className="px-6 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest disabled:opacity-30 transition-all border border-white/5"
                     >
                       Назад
                     </button>
                     <button 
                       onClick={() => { setCurrentStepIdx(prev => Math.min(steps.length - 1, prev + 1)); setIsPlaying(false); }}
                       disabled={currentStepIdx >= steps.length - 1}
-                      className="px-6 py-4 bg-teal-600 hover:bg-teal-500 text-white font-black rounded-2xl text-[10px] uppercase tracking-widest disabled:opacity-30 transition-all shadow-[0_0_20px_rgba(13,148,136,0.3)] flex items-center gap-2"
+                      className="px-6 py-4 bg-teal-600 hover:bg-teal-500 text-white font-black rounded-2xl text-[11px] uppercase tracking-widest disabled:opacity-30 transition-all shadow-[0_0_20px_rgba(13,148,136,0.3)] flex items-center gap-2"
                     >
                       Вперёд <StepForward className="w-4 h-4" />
                     </button>
                   </div>
                   
-                  <select 
+                  <select aria-label="Скорость воспроизведения" 
                     value={playbackSpeed}
                     onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
                     className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white/60 focus:outline-none uppercase tracking-widest"
@@ -318,10 +318,10 @@ json.dumps(visualizer.steps)
                   {isExecuting && (
                     <div className="flex items-center gap-2 text-teal-400">
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Анализ...</span>
+                      <span className="text-[11px] font-black uppercase tracking-widest">Анализ...</span>
                     </div>
                   )}
-                  <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
+                  <div className="text-[11px] font-black text-white/50 uppercase tracking-[0.3em]">
                     Trace Engine v1.0
                   </div>
                 </div>

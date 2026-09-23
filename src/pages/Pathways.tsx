@@ -258,12 +258,12 @@ export const Pathways = () => {
                                 <CheckCircle2 className="w-3 h-3" />
                                 ПРОЙДЕНО
                               </div>
-                              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] flex items-center gap-1">
+                              <span className="text-[11px] font-black text-emerald-400 uppercase tracking-[0.2em] flex items-center gap-1">
                                 <Award className="w-3 h-3" /> МАСТЕРСТВО
                               </span>
                             </div>
                           ) : (
-                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+                            <span className={`px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest border ${
                               lesson.level === 'Beginner' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' :
                               lesson.level === 'Intermediate' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                               lesson.level === 'Advanced' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :

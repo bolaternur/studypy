@@ -227,7 +227,7 @@ const CommunityChat = ({ onStatusChange }: { onStatusChange: (status: ChatStatus
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-bold text-sm text-white">{msg.username}</span>
-                  <span className="text-[10px] text-white/20 uppercase tracking-tighter">
+                  <span className="text-[11px] text-white/50 uppercase tracking-tighter">
                     {msg.createdAt?.toDate ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
                   </span>
                 </div>
@@ -242,7 +242,7 @@ const CommunityChat = ({ onStatusChange }: { onStatusChange: (status: ChatStatus
 
         <form onSubmit={handleSend} className="p-4 bg-white/5 border-t border-white/10">
           <div className="flex gap-2">
-            <input
+            <input aria-label="Ввод для программы"
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}

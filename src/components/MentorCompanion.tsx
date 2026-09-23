@@ -82,12 +82,12 @@ const RichText = ({ text }: { text: string }) => {
 
 const SourceTag = ({ source }: { source: MentorSource }) =>
   source === 'ai' ? (
-    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-teal-300/70">
+    <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-widest text-teal-300/70">
       <Sparkles className="h-3 w-3" aria-hidden="true" /> ИИ
     </span>
   ) : (
     <span
-      className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-ink-30"
+      className="inline-flex items-center gap-1 text-[11px] uppercase tracking-widest text-ink-30"
       title="Ответ собран из встроенной базы знаний, без обращения к ИИ"
     >
       <BookOpen className="h-3 w-3" aria-hidden="true" /> База знаний

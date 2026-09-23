@@ -123,7 +123,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
                   <h2 className="text-xl font-black text-white italic tracking-tight">
                     {view === 'list' ? 'СООБЩЕНИЯ' : chatPartner?.username || 'ЧАТ'}
                   </h2>
-                  <p className="text-[10px] text-white/20 font-mono tracking-widest uppercase">
+                  <p className="text-[11px] text-white/50 font-mono tracking-widest uppercase">
                     {view === 'list' ? 'Ваши диалоги' : 'Приватный канал'}
                   </p>
                 </div>
@@ -143,7 +143,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
                   {chats.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
                       <MessageSquare className="w-12 h-12 text-white/5" />
-                      <p className="text-white/20 text-sm font-light">У вас пока нет активных диалогов.<br/>Вы можете начать чат в профиле любого игрока!</p>
+                      <p className="text-white/50 text-sm font-light">У вас пока нет активных диалогов.<br/>Вы можете начать чат в профиле любого игрока!</p>
                     </div>
                   ) : (
                     chats.map(chat => (
@@ -181,13 +181,13 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
                   {}
                   <div className="p-6 border-t border-white/10 bg-white/5">
                     <div className="relative group">
-                      <input 
+                      <input aria-label="Сообщение" 
                         type="text" 
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                         placeholder="Напишите сообщение..."
-                        className="w-full bg-black/60 border border-white/10 rounded-[1.5rem] py-4 pl-6 pr-14 text-white placeholder:text-white/20 outline-none focus:border-brand-primary transition-all shadow-inner"
+                        className="w-full bg-black/60 border border-white/10 rounded-[1.5rem] py-4 pl-6 pr-14 text-white placeholder:text-white/50 outline-none focus:border-brand-primary transition-all shadow-inner"
                       />
                       <button 
                         onClick={handleSend}
@@ -226,7 +226,7 @@ const ChatListItem: React.FC<{ chat: Chat, currentUid: string, onClick: () => vo
       className="w-full p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-brand-primary/30 hover:bg-white/10 transition-all flex items-center gap-4 text-left group"
     >
       <div className="relative">
-        <img 
+        <img
           src={partner.avatar || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${partner.uid}`} 
           className="w-12 h-12 rounded-xl bg-white/10 border border-white/10 p-1"
           alt={partner.username}
@@ -236,7 +236,7 @@ const ChatListItem: React.FC<{ chat: Chat, currentUid: string, onClick: () => vo
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
           <span className="font-bold text-white group-hover:text-brand-primary transition-colors truncate">{partner.username}</span>
-          <span className="text-[10px] text-white/20 font-mono">
+          <span className="text-[11px] text-white/50 font-mono">
             {chat.updatedAt?.toDate ? new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(chat.updatedAt.toDate()) : ''}
           </span>
         </div>

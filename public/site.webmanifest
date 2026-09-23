@@ -1,0 +1,10 @@
+{
+  "name": "StudyPy",
+  "short_name": "StudyPy",
+  "description": "Интерактивная платформа для изучения Python: уроки, задачи с автопроверкой и песочница прямо в браузере.",
+  "lang": "ru",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#04070a",
+  "theme_color": "#04070a"
+}

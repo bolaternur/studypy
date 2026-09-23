@@ -56,7 +56,7 @@ export const QuestSidebar = () => {
         </div>
         <div className="flex flex-col items-center -space-y-1">
           <ChevronLeft className="w-5 h-5 text-brand-primary group-hover:scale-125 transition-transform" />
-          <span className="text-[8px] font-black text-brand-primary uppercase tracking-tighter">Квесты</span>
+          <span className="text-[11px] font-black text-brand-primary uppercase tracking-tighter">Квесты</span>
         </div>
       </button>
 
@@ -78,7 +78,7 @@ export const QuestSidebar = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-white uppercase tracking-widest">Квесты</h3>
-                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-tighter">
+                  <p className="text-[11px] text-white/40 font-bold uppercase tracking-tighter">
                     Выполнено: {completedCount}/{totalCount}
                   </p>
                 </div>
@@ -126,7 +126,7 @@ export const QuestSidebar = () => {
                           exit={{ height: 0, opacity: 0 }}
                           className="overflow-hidden"
                         >
-                          <p className="text-[10px] text-white/50 leading-relaxed py-1">
+                          <p className="text-[11px] text-white/50 leading-relaxed py-1">
                             {quest.description}
                           </p>
                         </motion.div>
@@ -134,7 +134,7 @@ export const QuestSidebar = () => {
                     </AnimatePresence>
                     
                     <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/40">
+                      <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest text-white/40">
                         <span>Прогресс</span>
                         <span>{quest.current} / {quest.target}</span>
                       </div>
@@ -151,17 +151,17 @@ export const QuestSidebar = () => {
                       <div className="flex gap-3">
                         <div className="flex items-center gap-1">
                           <Coins className="w-3 h-3 text-amber-500" />
-                          <span className="text-[10px] font-black text-amber-500">+{quest.reward.coins}</span>
+                          <span className="text-[11px] font-black text-amber-500">+{quest.reward.coins}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Zap className="w-3 h-3 text-brand-primary" />
-                          <span className="text-[10px] font-black text-brand-primary">+{quest.reward.xp} XP</span>
+                          <span className="text-[11px] font-black text-brand-primary">+{quest.reward.xp} XP</span>
                         </div>
                       </div>
                       {!quest.completed && (
                         <button
                           onClick={() => handleQuestSolve(quest)}
-                          className="px-2 py-1 bg-brand-primary/20 hover:bg-brand-primary text-brand-primary hover:text-white rounded-lg text-[9px] font-black uppercase transition-all"
+                          className="px-2 py-1 bg-brand-primary/20 hover:bg-brand-primary text-brand-primary hover:text-white rounded-lg text-[11px] font-black uppercase transition-all"
                         >
                           Решить
                         </button>
@@ -174,7 +174,7 @@ export const QuestSidebar = () => {
 
             {}
             <div className="p-4 bg-white/5 border-t border-white/10 text-center">
-              <p className="text-[8px] text-white/20 uppercase tracking-[0.2em] font-black">
+              <p className="text-[11px] text-white/50 uppercase tracking-[0.2em] font-black">
                 Обновление каждые 24 часа
               </p>
             </div>

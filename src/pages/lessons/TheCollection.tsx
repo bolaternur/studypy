@@ -102,7 +102,7 @@ const ListVisualizer = () => {
               <div className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl font-mono text-emerald-300 font-bold shadow-lg">
                 {item}
               </div>
-              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-white/30 font-mono">
+              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-white/55 font-mono">
                 индекс: {index}
               </div>
               {index < list.length - 1 && (
@@ -116,7 +116,7 @@ const ListVisualizer = () => {
 
       {}
       <div className="flex flex-wrap gap-4 items-center bg-white/5 p-4 rounded-2xl border border-white/5">
-        <input 
+        <input aria-label="Ввод для программы" 
           type="text" 
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}

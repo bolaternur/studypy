@@ -193,8 +193,8 @@ export const BossArena = () => {
                     <div className="text-8xl drop-shadow-[0_0_30px_rgba(239,68,68,0.4)]">{boss.image || '👾'}</div>
                     <div className="flex-grow">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="px-3 py-1 rounded-full bg-red-600 text-white font-black text-[9px] uppercase tracking-[0.2em]">ГЛОБАЛЬНЫЙ БОСС</span>
-                        <span className="text-red-500 font-mono text-[10px] animate-pulse">LIVE EVENT</span>
+                        <span className="px-3 py-1 rounded-full bg-red-600 text-white font-black text-[11px] uppercase tracking-[0.2em]">ГЛОБАЛЬНЫЙ БОСС</span>
+                        <span className="text-red-500 font-mono text-[11px] animate-pulse">LIVE EVENT</span>
                       </div>
                       <h2 className="text-3xl font-black text-white italic mb-4">{boss.name}</h2>
                       
@@ -216,12 +216,12 @@ export const BossArena = () => {
                         <button 
                           onClick={() => startGlobalFight(boss)}
                           disabled={boss.currentHp <= 0}
-                          className={`px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center gap-2 text-xs ${boss.currentHp <= 0 ? 'bg-white/5 text-white/20' : 'bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/20'}`}
+                          className={`px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center gap-2 text-xs ${boss.currentHp <= 0 ? 'bg-white/5 text-white/50' : 'bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/20'}`}
                         >
                           {boss.currentHp <= 0 ? 'ПОВЕРЖЕН' : <><Swords className="w-4 h-4" /> ВСТУПИТЬ В БОЙ</>}
                         </button>
                         <div className="px-4 py-3 bg-white/5 rounded-xl border border-white/5 flex flex-col justify-center">
-                           <span className="text-[8px] text-white/30 uppercase">Награда</span>
+                           <span className="text-[11px] text-white/55 uppercase">Награда</span>
                            <span className="text-emerald-400 font-bold text-xs">+{boss.xpReward} XP / +{boss.coinReward} Cp</span>
                         </div>
                       </div>
@@ -248,25 +248,25 @@ export const BossArena = () => {
                     </div>
                     <div className="flex-grow">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                        <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border ${
                           boss.difficulty === 'Hard' ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' :
                           'border-red-500/30 text-red-400 bg-red-500/10'
                         }`}>
                           {boss.difficulty}
                         </span>
-                        <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{boss.title}</span>
+                        <span className="text-[11px] font-bold text-white/55 uppercase tracking-widest">{boss.title}</span>
                       </div>
                       <h3 className="text-3xl font-black mb-4 tracking-tight">{boss.name}</h3>
                       <p className="text-white/50 mb-8 leading-relaxed font-medium">{boss.description}</p>
                       
                       <div className="grid grid-cols-2 gap-4 mb-8">
                         <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                          <div className="text-[10px] text-white/30 uppercase font-black mb-1">Награда</div>
+                          <div className="text-[11px] text-white/55 uppercase font-black mb-1">Награда</div>
                           <div className="text-lg font-black text-emerald-400">+{boss.reward.xp} XP</div>
                           <div className="text-lg font-black text-brand-primary">+{boss.reward.coins} C</div>
                         </div>
                         <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                          <div className="text-[10px] text-white/30 uppercase font-black mb-1">Штраф</div>
+                          <div className="text-[11px] text-white/55 uppercase font-black mb-1">Штраф</div>
                           <div className="text-lg font-black text-red-400">-{boss.penalty.xp} XP</div>
                           <div className="text-lg font-black text-red-500">-{boss.penalty.coins} C</div>
                         </div>
@@ -304,7 +304,7 @@ export const BossArena = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] font-black text-white/30 uppercase mb-1">Твое здоровье</div>
+                      <div className="text-[11px] font-black text-white/55 uppercase mb-1">Твое здоровье</div>
                       <div className="w-48 h-3 bg-white/10 rounded-full overflow-hidden">
                         <motion.div 
                           initial={{ width: '100%' }}
@@ -324,11 +324,11 @@ export const BossArena = () => {
                 </div>
 
                 <div className="glass rounded-[32px] p-6 border border-white/10 h-48 overflow-y-auto custom-scrollbar font-mono text-sm">
-                  <div className="text-[10px] font-black text-white/30 uppercase mb-4 tracking-widest">Лог битвы</div>
+                  <div className="text-[11px] font-black text-white/55 uppercase mb-4 tracking-widest">Лог битвы</div>
                   <div className="space-y-2">
                     {battleLog.map((log, i) => (
                       <div key={i} className="flex gap-3">
-                        <span className="text-white/20">[{i+1}]</span>
+                        <span className="text-white/50">[{i+1}]</span>
                         <span className={log.includes('Вы') ? 'text-emerald-400' : log.includes('Битва') ? 'text-brand-primary' : 'text-red-400'}>
                           {log}
                         </span>

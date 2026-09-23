@@ -183,7 +183,7 @@ export const PetCompanion = React.memo(() => {
               <div className="flex justify-between items-start mb-8">
                 <div>
                   <h3 className="text-3xl font-black tracking-tighter">{pet.name}</h3>
-                  <div className="flex items-center gap-3 text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">
+                  <div className="flex items-center gap-3 text-[11px] font-bold text-white/40 uppercase tracking-widest mt-1">
                     <span className={`px-3 py-1 rounded-full bg-brand-primary/20 text-brand-primary border ${currentTier.border}`}>LVL {pet.level}</span>
                     <span className={currentTier.color}>{currentTier.name} Tier</span>
                     <span>{pet.xp} / 1000 XP</span>
@@ -262,9 +262,9 @@ export const PetCompanion = React.memo(() => {
                     ))}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Вид (Эмодзи)</label>
+                    <label className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Вид (Эмодзи)</label>
                     <div className="flex gap-2">
-                      <input 
+                      <input aria-label="Эмодзи питомца" 
                         type="text"
                         value={pet.type.startsWith('emoji:') ? pet.type.replace('emoji:', '') : ''}
                         onChange={(e) => { void customizePet({ name: pet.name, type: `emoji:${e.target.value}`, customPixels: pet.customPixels }); }}
@@ -278,8 +278,8 @@ export const PetCompanion = React.memo(() => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Имя питомца</label>
-                    <input 
+                    <label className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Имя питомца</label>
+                    <input aria-label="Имя питомца" 
                       type="text"
                       value={pet.name}
                         onChange={(e) => { void customizePet({ name: e.target.value, type: pet.type, customPixels: pet.customPixels }); }}
@@ -335,12 +335,12 @@ export const PetCompanion = React.memo(() => {
                       {currentTier.id >= 2 && (
                         <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
                            {pet.level >= 10 && (
-                             <div className="px-2 py-0.5 bg-teal-500/20 border border-teal-500/30 rounded text-[8px] font-black text-teal-400 uppercase tracking-tighter whitespace-nowrap">
+                             <div className="px-2 py-0.5 bg-teal-500/20 border border-teal-500/30 rounded text-[11px] font-black text-teal-400 uppercase tracking-tighter whitespace-nowrap">
                                Logic Aura Active
                              </div>
                            )}
                            {pet.level >= 20 && (
-                             <div className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 rounded text-[8px] font-black text-amber-500 uppercase tracking-tighter whitespace-nowrap">
+                             <div className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 rounded text-[11px] font-black text-amber-500 uppercase tracking-tighter whitespace-nowrap">
                                Coin Magnet x1.2
                              </div>
                            )}
@@ -355,7 +355,7 @@ export const PetCompanion = React.memo(() => {
                       className="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-teal-500/30 transition-all group"
                     >
                       <BrainCircuit className="w-4 h-4 text-teal-400 mb-1 mx-auto group-hover:scale-110 transition-transform" />
-                      <div className="text-[8px] font-bold text-white/40 uppercase">Logic</div>
+                      <div className="text-[11px] font-bold text-white/40 uppercase">Logic</div>
                       <div className="text-xs font-black">{pet.stats.logic}</div>
                     </button>
                     <button 
@@ -363,7 +363,7 @@ export const PetCompanion = React.memo(() => {
                       className="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-emerald-500/30 transition-all group"
                     >
                       <Zap className="w-4 h-4 text-emerald-400 mb-1 mx-auto group-hover:scale-110 transition-transform" />
-                      <div className="text-[8px] font-bold text-white/40 uppercase">Speed</div>
+                      <div className="text-[11px] font-bold text-white/40 uppercase">Speed</div>
                       <div className="text-xs font-black">{pet.stats.speed}</div>
                     </button>
                     <button 
@@ -371,7 +371,7 @@ export const PetCompanion = React.memo(() => {
                       className="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-red-500/30 transition-all group"
                     >
                       <Swords className="w-4 h-4 text-red-400 mb-1 mx-auto group-hover:scale-110 transition-transform" />
-                      <div className="text-[8px] font-bold text-white/40 uppercase">Power</div>
+                      <div className="text-[11px] font-bold text-white/40 uppercase">Power</div>
                       <div className="text-xs font-black">{pet.stats.power}</div>
                     </button>
                     <button 
@@ -379,7 +379,7 @@ export const PetCompanion = React.memo(() => {
                       className="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-emerald-500/30 transition-all group"
                     >
                       <BrainCircuit className="w-4 h-4 text-emerald-400 mb-1 mx-auto group-hover:scale-110 transition-transform" />
-                      <div className="text-[8px] font-bold text-white/40 uppercase">Intellect</div>
+                      <div className="text-[11px] font-bold text-white/40 uppercase">Intellect</div>
                       <div className="text-xs font-black">{pet.stats.intellect || 10}</div>
                     </button>
                   </div>
@@ -404,7 +404,7 @@ export const PetCompanion = React.memo(() => {
                           <GraduationCap className="w-5 h-5 text-emerald-400" />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Совет Ментора</p>
+                          <p className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">Совет Ментора</p>
                           <p className="text-xs text-white/70 leading-relaxed font-medium">
                             {mentorHint}
                           </p>
@@ -422,14 +422,14 @@ export const PetCompanion = React.memo(() => {
                             setIsFeeding(true);
                           }
                         }}
-                        className="py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                        className="py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
                       >
                         <Utensils className="w-4 h-4 text-amber-500" /> Покормить
                       </button>
                       <button 
                         onClick={handleGetHint}
                         disabled={isMentorLoading}
-                        className="py-4 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                        className="py-4 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                       >
                         {isMentorLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GraduationCap className="w-4 h-4" />}
                         Ментор
@@ -447,7 +447,7 @@ export const PetCompanion = React.memo(() => {
                         >
                           <div className="flex justify-between items-center mb-4">
                             <h4 className="text-xs font-black uppercase tracking-widest">Выберите еду</h4>
-                            <button onClick={() => setIsFeeding(false)} className="text-white/40 hover:text-white text-[10px] font-bold">Закрыть</button>
+                            <button onClick={() => setIsFeeding(false)} className="text-white/40 hover:text-white text-[11px] font-bold">Закрыть</button>
                           </div>
                           <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto pr-2">
                             {foodItems.map((item) => (
@@ -464,7 +464,7 @@ export const PetCompanion = React.memo(() => {
                                    item.itemId.includes('energy') ? '⚡' :
                                    item.itemId.includes('brain') ? '🧠' : '🍱'}
                                 </span>
-                                <span className="text-[8px] font-bold text-white/40 uppercase truncate w-full text-center px-1">
+                                <span className="text-[11px] font-bold text-white/40 uppercase truncate w-full text-center px-1">
                                   {item.name}
                                 </span>
                               </button>
@@ -491,7 +491,7 @@ export const PetCompanion = React.memo(() => {
         className={`w-16 h-16 rounded-full glass border-2 flex items-center justify-center text-3xl shadow-2xl transition-all ${isOpen ? 'border-brand-primary bg-brand-primary/20 rotate-12' : 'border-white/10 hover:border-brand-primary/50'}`}
       >
         {getPetEmoji()}
-        <div className="absolute -top-1 -right-1 w-5 h-5 bg-brand-primary rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-bg-dark">
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-brand-primary rounded-full flex items-center justify-center text-[11px] font-bold border-2 border-bg-dark">
           {pet.level}
         </div>
       </motion.button>

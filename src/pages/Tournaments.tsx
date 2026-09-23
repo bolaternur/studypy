@@ -71,14 +71,14 @@ export function Tournaments() {
                 transition={{ delay: index * 0.08 }}
                 className="group relative overflow-hidden rounded-[32px] border border-white/5 bg-[#080d10] p-8 transition-all duration-500 hover:border-white/15"
               >
-                <div className={`absolute right-0 top-0 rounded-bl-2xl bg-gradient-to-r ${meta.gradient} px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white`}>
+                <div className={`absolute right-0 top-0 rounded-bl-2xl bg-gradient-to-r ${meta.gradient} px-6 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white`}>
                   {meta.label}
                 </div>
                 <Icon className="mb-8 h-10 w-10 text-amber-500" />
                 <h2 className="mb-3 text-2xl font-bold text-white transition-colors group-hover:text-amber-500">{tournament.title}</h2>
                 <p className="mb-8 min-h-12 text-sm leading-relaxed text-white/45">{tournament.description}</p>
                 <div className="mb-8 rounded-2xl border border-white/5 bg-white/5 p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-white/40">Максимальная награда за серию</div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-white/40">Максимальная награда за серию</div>
                   <div className="mt-1 text-xl font-bold text-amber-500">до {tournament.reward} XP + 150 монет</div>
                 </div>
                 <button onClick={() => startTraining(tournament.id)} className="rounded-xl bg-white px-6 py-3 text-sm font-bold text-black transition-all hover:scale-105 hover:bg-amber-500 hover:text-white">

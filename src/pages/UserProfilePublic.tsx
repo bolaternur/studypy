@@ -167,7 +167,7 @@ export const UserProfilePublic = () => {
                 </div>
               </div>
               
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-white/40 font-bold uppercase tracking-widest text-[10px]">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-white/40 font-bold uppercase tracking-widest text-[11px]">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-amber-500" />
                   <span>Level {profile.level}</span>
@@ -216,7 +216,7 @@ export const UserProfilePublic = () => {
                   { label: 'Intellect', value: profile.stats.intellect, icon: <Star />, color: 'text-teal-400', bg: 'bg-teal-500/10' }
                 ].map((stat, i) => (
                   <div key={i} className="space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                    <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
                       <div className="flex items-center gap-2 text-white/40">
                         {React.cloneElement(stat.icon as any, { className: 'w-3 h-3' })}
                         {stat.label}
@@ -241,7 +241,7 @@ export const UserProfilePublic = () => {
                 <div className="flex justify-between items-start mb-8">
                   <div>
                     <h3 className="text-xl font-black uppercase tracking-tighter">{profile.pet.name}</h3>
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">Loyal Companion • LVL {profile.pet.level}</p>
+                    <p className="text-[11px] font-black text-white/50 uppercase tracking-[0.2em] mt-1">Loyal Companion • LVL {profile.pet.level}</p>
                   </div>
                   <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl border border-white/10">
                     {profile.pet.type.startsWith('emoji:') ? profile.pet.type.replace('emoji:', '') : '🤖'}
@@ -269,16 +269,16 @@ export const UserProfilePublic = () => {
           <div className="lg:col-span-2 space-y-8">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-3xl font-black tracking-tighter uppercase italic">Masterpieces</h3>
-              <div className="text-white/40 text-[10px] font-black uppercase tracking-widest">{snippets.length} Shared Snippets</div>
+              <div className="text-white/40 text-[11px] font-black uppercase tracking-widest">{snippets.length} Shared Snippets</div>
             </div>
 
             {snippets.length === 0 ? (
               <div className="h-[400px] glass rounded-[40px] border border-white/10 flex flex-col items-center justify-center text-center p-10">
                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
-                   <Code2 className="w-10 h-10 text-white/10" />
+                   <Code2 className="w-10 h-10 text-white/45" />
                 </div>
                 <h4 className="text-xl font-bold text-white/40 uppercase tracking-widest">No shared code yet</h4>
-                <p className="text-white/20 text-sm mt-2 max-w-xs">Этот кодер пока хранит свои секреты в тайне.</p>
+                <p className="text-white/50 text-sm mt-2 max-w-xs">Этот кодер пока хранит свои секреты в тайне.</p>
               </div>
             ) : (
               <div className="grid gap-6">
@@ -308,14 +308,14 @@ export const UserProfilePublic = () => {
                     
                     <div className="flex flex-wrap gap-2">
                       {snippet.tags.map(tag => (
-                        <span key={tag} className="px-3 py-1 bg-white/5 rounded-xl text-[10px] font-black text-white/40 uppercase tracking-wider">
+                        <span key={tag} className="px-3 py-1 bg-white/5 rounded-xl text-[11px] font-black text-white/40 uppercase tracking-wider">
                           #{tag}
                         </span>
                       ))}
                     </div>
 
                     <div className="mt-6 flex justify-end">
-                       <div className="flex items-center gap-2 text-[10px] font-black text-brand-primary uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity">
+                       <div className="flex items-center gap-2 text-[11px] font-black text-brand-primary uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity">
                          Inspect Code <ExternalLink className="w-3 h-3" />
                        </div>
                     </div>

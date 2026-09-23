@@ -66,7 +66,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             {}
             <div className="flex flex-col items-center">
               <div className="relative">
-                <img 
+                <img
                   src={user.avatar || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.uid}`} 
                   alt={user.username}
                   className="w-32 h-32 rounded-3xl bg-[#111] border-4 border-[#080d10] shadow-xl p-2"
@@ -99,7 +99,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
             {}
             <div className="mt-8">
-              <h3 className="text-[10px] font-black uppercase text-white/20 tracking-widest mb-4 px-2">Боевые Характеристики</h3>
+              <h3 className="text-[11px] font-black uppercase text-white/50 tracking-widest mb-4 px-2">Боевые Характеристики</h3>
               <div className="grid grid-cols-2 gap-2">
                 {stats.map(s => (
                   <div key={s.name} className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
@@ -107,7 +107,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       {s.icon}
                     </div>
                     <div>
-                      <div className="text-[10px] text-white/40 uppercase font-black">{s.name}</div>
+                      <div className="text-[11px] text-white/40 uppercase font-black">{s.name}</div>
                       <div className="text-sm font-black text-white">{s.value}</div>
                     </div>
                   </div>
@@ -118,7 +118,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <Trophy className="w-4 h-4 text-brand-primary" />
                   </div>
                   <div>
-                    <div className="text-[10px] text-brand-primary/60 uppercase font-black">Пройдено Уроков</div>
+                    <div className="text-[11px] text-brand-primary/60 uppercase font-black">Пройдено Уроков</div>
                     <div className="text-sm font-black text-white">{user.completedLessons?.length || 0}</div>
                   </div>
                 </div>
@@ -156,7 +156,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     navigate(`/u/${user.username}`);
                     onClose();
                   }}
-                  className="w-full py-4 bg-white/5 border border-white/10 text-white hover:text-brand-primary hover:border-brand-primary/50 font-black uppercase tracking-widest text-[10px] rounded-xl flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-4 bg-white/5 border border-white/10 text-white hover:text-brand-primary hover:border-brand-primary/50 font-black uppercase tracking-widest text-[11px] rounded-xl flex items-center justify-center gap-2 transition-all"
                 >
                   Explore Full Profile <Star className="w-3 h-3" />
                 </button>

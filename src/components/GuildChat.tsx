@@ -46,8 +46,8 @@ export const GuildChat = ({ guildId }: { guildId: string }) => {
           return (
             <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{msg.senderName}</span>
-                <span className="text-[8px] text-white/20">{time}</span>
+                <span className="text-[11px] font-bold text-white/40 uppercase tracking-widest">{msg.senderName}</span>
+                <span className="text-[11px] text-white/50">{time}</span>
               </div>
               <div className={`px-4 py-2 rounded-2xl max-w-[80%] break-words text-sm ${isMe ? 'bg-brand-primary text-black font-medium rounded-tr-sm' : 'bg-white/10 text-white rounded-tl-sm'}`}>
                 {msg.text}
@@ -59,12 +59,12 @@ export const GuildChat = ({ guildId }: { guildId: string }) => {
       </div>
 
       <form onSubmit={handleSend} className="p-4 border-t border-white/10 bg-black/20 flex items-center gap-2">
-        <input 
+        <input aria-label="Сообщение" 
           type="text"
           value={newMessage}
           onChange={e => setNewMessage(e.target.value)}
           placeholder="Сообщение гильдии..."
-          className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-primary transition-colors text-white placeholder:text-white/30"
+          className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-primary transition-colors text-white placeholder:text-white/55"
         />
         <button 
           type="submit"

@@ -82,10 +82,10 @@ export const LessonDetail = () => {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <span className="px-3 py-1 rounded-full bg-brand-primary/20 text-brand-primary text-[10px] font-bold uppercase tracking-widest">
+                <span className="px-3 py-1 rounded-full bg-brand-primary/20 text-brand-primary text-[11px] font-bold uppercase tracking-widest">
                   {lesson.level}
                 </span>
-                <span className="text-white/20">•</span>
+                <span className="text-white/50">•</span>
                 <span className="text-white/40 text-sm">Урок {LESSONS.indexOf(lesson) + 1} из {LESSONS.length}</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-display font-bold">{lesson.title}</h1>

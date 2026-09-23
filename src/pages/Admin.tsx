@@ -184,7 +184,7 @@ export const Admin = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                className={`px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${
                   activeTab === tab 
                     ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' 
                     : 'text-white/40 hover:text-white hover:bg-white/5'
@@ -217,8 +217,8 @@ export const Admin = () => {
                     Поиск игрока
                   </h2>
                   <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                    <input 
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+                    <input aria-label="Username..." 
                       type="text"
                       placeholder="Username..."
                       value={searchQuery}
@@ -241,7 +241,7 @@ export const Admin = () => {
                         </div>
                         <div className="text-left font-mono">
                           <p className="text-sm font-bold text-white">{user.username}</p>
-                          <p className="text-[9px] text-white/20">{user.uid}</p>
+                          <p className="text-[11px] text-white/50">{user.uid}</p>
                         </div>
                       </button>
                     ))}
@@ -256,7 +256,7 @@ export const Admin = () => {
                   </h2>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
                     {logs.map(log => (
-                      <div key={log.id} className="p-3 bg-white/5 rounded-xl border border-white/5 font-mono text-[9px] leading-tight">
+                      <div key={log.id} className="p-3 bg-white/5 rounded-xl border border-white/5 font-mono text-[11px] leading-tight">
                         <span className={log.status === 'success' ? 'text-emerald-500' : 'text-red-500'}>
                           [{log.action}]
                         </span>{' '}
@@ -330,7 +330,7 @@ export const Admin = () => {
                                 <Flame className="w-16 h-16" />
                               </div>
                               <div className="relative z-10 text-left">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1">DANGEROUS ROOT ACTION</p>
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] mb-1">DANGEROUS ROOT ACTION</p>
                                 <h4 className="text-2xl font-black italic">ULTIMATE MAX OUT</h4>
                                 <p className="text-xs text-white/60 mt-2">All-in-one GOD MODE</p>
                               </div>
@@ -394,25 +394,25 @@ export const Admin = () => {
                       <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar no-scrollbar mt-4">
                          <button 
                            onClick={() => adminUpdateUserStats(selectedUser.uid, { logic: 99, speed: 99, power: 99, intellect: 99, stamina: 99 })}
-                           className="px-6 py-3 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-brand-primary hover:bg-brand-primary hover:text-black transition-all shrink-0"
+                           className="px-6 py-3 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl text-[11px] font-black uppercase tracking-widest text-brand-primary hover:bg-brand-primary hover:text-black transition-all shrink-0"
                          >
                             ✨ Max Stats
                          </button>
                          <button 
                            onClick={() => adminSetLevel(selectedUser.uid, (selectedUser?.level || 1) + 1, (selectedUser?.xp || 0) + 1000)}
-                           className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all shrink-0"
+                           className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[11px] font-black uppercase tracking-widest text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all shrink-0"
                          >
                             📈 Level Up +1
                          </button>
                          <button 
                            onClick={() => adminAddCoins(selectedUser.uid, 100000)}
-                           className="px-6 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-amber-500 hover:bg-amber-500 hover:text-black transition-all shrink-0"
+                           className="px-6 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-[11px] font-black uppercase tracking-widest text-amber-500 hover:bg-amber-500 hover:text-black transition-all shrink-0"
                          >
                             💰 +100k Money
                          </button>
                          <button 
                            onClick={() => adminGiveItem(selectedUser.uid, 'legendary_chest')}
-                           className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all shrink-0"
+                           className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[11px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all shrink-0"
                          >
                             🎁 Give Legend Chest
                          </button>
@@ -428,7 +428,7 @@ export const Admin = () => {
                           </h3>
                           <div className="space-y-4">
                             <div className="flex gap-3">
-                              <input 
+                              <input aria-label="Количество монет" 
                                 type="number"
                                 value={coinAmount}
                                 onChange={(e) => setCoinAmount(Number(e.target.value))}
@@ -437,7 +437,7 @@ export const Admin = () => {
                               <button onClick={handleUpdateCoins} className="px-8 bg-amber-500 text-black font-black rounded-2xl hover:scale-105 transition-all">ADD</button>
                             </div>
                             <div className="flex gap-3">
-                              <input 
+                              <input aria-label="Уровень" 
                                 type="number"
                                 value={targetLevel}
                                 onChange={(e) => setTargetLevel(Number(e.target.value))}
@@ -488,18 +488,18 @@ export const Admin = () => {
                               }`}
                             >
                               <span className={s.color}>{React.cloneElement(s.icon as any, { className: 'w-4 h-4' })}</span>
-                              <span className="text-[10px] font-black uppercase tracking-widest">{s.id}</span>
+                              <span className="text-[11px] font-black uppercase tracking-widest">{s.id}</span>
                             </button>
                           ))}
                         </div>
                         <div className="flex gap-3">
-                          <input 
+                          <input aria-label="Значение характеристики" 
                             type="number"
                             value={statValue}
                             onChange={(e) => setStatValue(Number(e.target.value))}
                             className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-4 text-xl font-black text-white outline-none focus:border-teal-500"
                           />
-                          <button onClick={handleUpdateStats} className="px-8 bg-teal-500 text-white font-black rounded-2xl hover:scale-105 transition-all uppercase text-[10px]">Apply</button>
+                          <button onClick={handleUpdateStats} className="px-8 bg-teal-500 text-white font-black rounded-2xl hover:scale-105 transition-all uppercase text-[11px]">Apply</button>
                         </div>
                       </div>
 
@@ -511,7 +511,7 @@ export const Admin = () => {
                          </h3>
                          <button
                            onClick={() => adminCompleteAllQuests(selectedUser.uid)}
-                           className="px-4 py-2 bg-brand-primary/20 hover:bg-brand-primary border border-brand-primary/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-brand-primary hover:text-white transition-all"
+                           className="px-4 py-2 bg-brand-primary/20 hover:bg-brand-primary border border-brand-primary/30 rounded-xl text-[11px] font-black uppercase tracking-widest text-brand-primary hover:text-white transition-all"
                          >
                            🎯 Все квесты
                          </button>
@@ -530,11 +530,11 @@ export const Admin = () => {
                                    quest.completed ? 'text-emerald-400' : 'text-white'
                                  }`}>{quest.title}</p>
                                  <div className="flex items-center gap-3 mt-1">
-                                   <span className="text-[10px] text-white/30 font-mono">
+                                   <span className="text-[11px] text-white/55 font-mono">
                                      {quest.current}/{quest.target}
                                    </span>
-                                   <span className="text-[10px] text-amber-500 font-bold">+{quest.reward?.coins || 0} 💰</span>
-                                   <span className="text-[10px] text-brand-primary font-bold">+{quest.reward?.xp || 0} XP</span>
+                                   <span className="text-[11px] text-amber-500 font-bold">+{quest.reward?.coins || 0} 💰</span>
+                                   <span className="text-[11px] text-brand-primary font-bold">+{quest.reward?.xp || 0} XP</span>
                                  </div>
                                  <div className="mt-1.5 h-1 bg-white/5 rounded-full overflow-hidden">
                                    <div
@@ -548,7 +548,7 @@ export const Admin = () => {
                                {!quest.completed ? (
                                  <button
                                    onClick={() => adminCompleteQuest(selectedUser.uid, quest.id)}
-                                   className="shrink-0 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500 border border-emerald-500/30 rounded-xl text-[9px] font-black uppercase tracking-widest text-emerald-400 hover:text-white transition-all"
+                                   className="shrink-0 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500 border border-emerald-500/30 rounded-xl text-[11px] font-black uppercase tracking-widest text-emerald-400 hover:text-white transition-all"
                                  >
                                    ✅ Выполнить
                                  </button>
@@ -559,10 +559,10 @@ export const Admin = () => {
                            ))}
                          </div>
                        ) : (
-                         <div className="text-center py-8 text-white/20">
+                         <div className="text-center py-8 text-white/50">
                            <Target className="w-10 h-10 mx-auto mb-2 opacity-20" />
                            <p className="text-xs font-bold uppercase tracking-widest">Нет активных квестов</p>
-                           <p className="text-[10px] mt-1 text-white/10">У игрока пока нет суточных квестов</p>
+                           <p className="text-[11px] mt-1 text-white/45">У игрока пока нет суточных квестов</p>
                          </div>
                        )}
                      </div>
@@ -572,8 +572,8 @@ export const Admin = () => {
                   <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-center space-y-6 glass rounded-[3rem] border-2 border-dashed border-white/5">
                     <Database className="w-20 h-20 text-white/5" />
                     <div className="space-y-2">
-                       <h3 className="text-2xl font-black text-white/20 uppercase tracking-[0.3em]">No Target Identified</h3>
-                       <p className="text-white/10 font-mono text-sm italic">Используйте поиск слева для доступа к данным пользователя</p>
+                       <h3 className="text-2xl font-black text-white/50 uppercase tracking-[0.3em]">No Target Identified</h3>
+                       <p className="text-white/45 font-mono text-sm italic">Используйте поиск слева для доступа к данным пользователя</p>
                     </div>
                   </div>
                 )}
@@ -599,12 +599,12 @@ export const Admin = () => {
                        </div>
                        <div>
                           <h2 className="text-3xl font-black text-white italic">KNOWLEDGE BROWSER</h2>
-                          <p className="text-brand-primary font-mono text-[10px] tracking-widest">COMPLETE ACCESS TO ALL SOLUTIONS</p>
+                          <p className="text-brand-primary font-mono text-[11px] tracking-widest">COMPLETE ACCESS TO ALL SOLUTIONS</p>
                        </div>
                     </div>
                     <div className="relative w-full md:w-96">
-                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                       <input 
+                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+                       <input aria-label="Search lessons/challenges..." 
                          type="text"
                          placeholder="Search lessons/challenges..."
                          value={solutionSearch}
@@ -631,7 +631,7 @@ export const Admin = () => {
                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
                               {lesson.id === 'intro' ? '🌱' : '⚡'}
                            </div>
-                           <span className="text-[10px] font-black uppercase text-white/20 tracking-widest">{lesson.level}</span>
+                           <span className="text-[11px] font-black uppercase text-white/50 tracking-widest">{lesson.level}</span>
                         </div>
                         <h4 className="text-lg font-black text-white group-hover:text-brand-primary transition-colors">{lesson.title}</h4>
                         <p className="text-xs text-white/40 mt-2 line-clamp-2">{lesson.description}</p>
@@ -643,7 +643,7 @@ export const Admin = () => {
                                e.stopPropagation();
                                handleCompleteTargetLesson(lesson.id);
                              }}
-                             className="mt-6 w-full py-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-brand-primary hover:bg-brand-primary hover:text-black transition-all"
+                             className="mt-6 w-full py-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl text-[11px] font-black uppercase tracking-widest text-brand-primary hover:bg-brand-primary hover:text-black transition-all"
                            >
                              Force Complete
                            </button>
@@ -691,7 +691,7 @@ export const Admin = () => {
                              <div className="space-y-6">
                                 {selectedLesson.quiz && (
                                    <div className="p-6 bg-emerald-500/5 rounded-3xl border border-emerald-500/20">
-                                      <h5 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                      <h5 className="text-[11px] font-black text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                          <Trophy className="w-3 h-3" /> QUIZ ANSWER
                                       </h5>
                                       <div className="p-4 bg-black/40 rounded-xl font-mono text-emerald-400 text-sm border border-emerald-500/10">
@@ -701,7 +701,7 @@ export const Admin = () => {
                                 )}
 
                                 <div className="space-y-4">
-                                   <h5 className="text-[10px] font-black text-brand-primary uppercase tracking-widest flex items-center gap-2">
+                                   <h5 className="text-[11px] font-black text-brand-primary uppercase tracking-widest flex items-center gap-2">
                                       <Code2 className="w-4 h-4" /> CHALLENGE SOLUTIONS (1-5)
                                    </h5>
                                    
@@ -711,7 +711,7 @@ export const Admin = () => {
                                          return (
                                             <div key={idx} className="p-6 bg-white/5 rounded-3xl border border-white/10 space-y-4 group hover:border-brand-primary/30 transition-all">
                                                <div className="flex justify-between items-start">
-                                                  <div className="px-3 py-1 bg-brand-primary/10 rounded-lg text-[10px] font-black text-brand-primary uppercase">
+                                                  <div className="px-3 py-1 bg-brand-primary/10 rounded-lg text-[11px] font-black text-brand-primary uppercase">
                                                      Task {idx + 1}
                                                   </div>
                                                   <button 
@@ -726,7 +726,7 @@ export const Admin = () => {
                                                </div>
                                                <div>
                                                   <h6 className="text-sm font-bold text-white">{ch.question}</h6>
-                                                  <p className="text-[10px] text-white/40 mt-1 line-clamp-2">{ch.description}</p>
+                                                  <p className="text-[11px] text-white/40 mt-1 line-clamp-2">{ch.description}</p>
                                                </div>
                                                <div className="p-4 bg-black rounded-2xl border border-white/5 font-mono text-[11px] text-brand-primary/80 overflow-x-auto">
                                                   <pre>{String(solution)}</pre>
@@ -771,12 +771,12 @@ export const Admin = () => {
                     <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">System Core v2.4</h3>
                     <div className="grid grid-cols-2 gap-4">
                        <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Total Lessons</p>
+                          <p className="text-[11px] font-black text-white/50 uppercase tracking-widest mb-1">Total Lessons</p>
                           <p className="text-3xl font-black text-brand-primary">{LESSONS.length}</p>
                        </div>
                        <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Server Status</p>
-                          <p className={`text-3xl font-black ${systemHealth === 'online' ? 'text-emerald-500' : systemHealth === 'offline' ? 'text-red-500' : 'text-white/30'}`}>
+                          <p className="text-[11px] font-black text-white/50 uppercase tracking-widest mb-1">Server Status</p>
+                          <p className={`text-3xl font-black ${systemHealth === 'online' ? 'text-emerald-500' : systemHealth === 'offline' ? 'text-red-500' : 'text-white/55'}`}>
                             {systemHealth === 'online' ? 'ONLINE' : systemHealth === 'offline' ? 'OFFLINE' : 'CHECKING'}
                           </p>
                        </div>
@@ -839,7 +839,7 @@ export const Admin = () => {
                             await BossService.rotateBosses();
                             toast.success('Пул боссов обновлен на текущую неделю!');
                           }}
-                          className="w-full py-4 bg-white/5 border border-white/10 text-white/40 font-black rounded-2xl uppercase tracking-widest hover:text-white hover:bg-white/10 transition-all text-[10px]"
+                          className="w-full py-4 bg-white/5 border border-white/10 text-white/40 font-black rounded-2xl uppercase tracking-widest hover:text-white hover:bg-white/10 transition-all text-[11px]"
                         >
                           <RefreshCw className="w-3 h-3 inline mr-2" /> ОБНОВИТЬ ПУЛ БОССОВ (НЕДЕЛЬНЫЙ)
                         </button>

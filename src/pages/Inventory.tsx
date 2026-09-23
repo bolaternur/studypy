@@ -25,7 +25,7 @@ const InventoryItemCard = React.memo(({ item, index, onSelect }: { item: any, in
       } flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform`}>
         {item.icon}
       </div>
-      <span className="text-[10px] font-bold text-white/60 text-center line-clamp-1">{item.name}</span>
+      <span className="text-[11px] font-bold text-white/60 text-center line-clamp-1">{item.name}</span>
       
       {item.rarity === 'legendary' && (
         <div className="absolute top-2 right-2">
@@ -146,9 +146,9 @@ export const Inventory = () => {
                   <div className="w-48 h-48 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-full p-1 shadow-[0_0_50px_rgba(45,212,191,0.3)]">
                     <div className="w-full h-full bg-[#080d10] rounded-full flex items-center justify-center overflow-hidden border-4 border-white/10">
                       {userProfile.avatar ? (
-                        <img src={userProfile.avatar} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img alt="" src={userProfile.avatar} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       ) : (
-                        <User className="w-24 h-24 text-white/20" />
+                        <User className="w-24 h-24 text-white/50" />
                       )}
                     </div>
                   </div>
@@ -239,7 +239,7 @@ export const Inventory = () => {
                   {inventoryItems.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-[400px] text-center space-y-4">
                       <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
-                        <ShoppingBag className="w-10 h-10 text-white/10" />
+                        <ShoppingBag className="w-10 h-10 text-white/45" />
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-white">Пусто...</h3>
@@ -273,7 +273,7 @@ export const Inventory = () => {
 
                   {pendingTrades.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-[300px] text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                      <ArrowRightLeft className="w-12 h-12 text-white/10" />
+                      <ArrowRightLeft className="w-12 h-12 text-white/45" />
                       <p className="text-white/40">Нет активных предложений обмена</p>
                     </div>
                   ) : (
@@ -291,13 +291,13 @@ export const Inventory = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-[10px] text-white/20 uppercase tracking-widest">Предложение</p>
+                              <p className="text-[11px] text-white/50 uppercase tracking-widest">Предложение</p>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <p className="text-[10px] font-bold text-white/40 uppercase">Вы получите:</p>
+                              <p className="text-[11px] font-bold text-white/40 uppercase">Вы получите:</p>
                               <div className="flex flex-wrap gap-2">
                                 {trade.senderItems.map((id: string, i: number) => (
                                   <div key={i} className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center border border-white/10" title={id}>
@@ -307,7 +307,7 @@ export const Inventory = () => {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <p className="text-[10px] font-bold text-white/40 uppercase">Вы отдадите:</p>
+                              <p className="text-[11px] font-bold text-white/40 uppercase">Вы отдадите:</p>
                               <div className="flex flex-wrap gap-2">
                                 {trade.receiverItems.map((id: string, i: number) => (
                                   <div key={i} className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center border border-white/10" title={id}>
@@ -341,7 +341,7 @@ export const Inventory = () => {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold text-white uppercase tracking-tighter">Ежедневные Квесты</h3>
-                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-[10px] text-white/40 font-mono uppercase tracking-widest">
+                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-[11px] text-white/40 font-mono uppercase tracking-widest">
                       Обновление через: {Math.max(0, 24 - Math.floor((new Date().getTime() - (userProfile.lastQuestUpdate?.toDate().getTime() || 0)) / (1000 * 60 * 60)))}ч
                     </div>
                   </div>
@@ -353,7 +353,7 @@ export const Inventory = () => {
                           <div className="space-y-2">
                             <div className="flex items-center gap-3">
                               <h3 className={`text-lg font-bold ${quest.completed ? 'text-emerald-500' : 'text-white'}`}>{quest.title}</h3>
-                              {quest.completed && <div className="px-2 py-0.5 bg-emerald-500 text-black text-[8px] font-black uppercase rounded-full">Выполнено</div>}
+                              {quest.completed && <div className="px-2 py-0.5 bg-emerald-500 text-black text-[11px] font-black uppercase rounded-full">Выполнено</div>}
                             </div>
                             <p className="text-sm text-white/60">{quest.description}</p>
                             
@@ -370,7 +370,7 @@ export const Inventory = () => {
                           </div>
 
                           <div className="w-full md:w-48 space-y-2">
-                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/40">
+                            <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest text-white/40">
                               <span>Прогресс</span>
                               <span>{quest.current} / {quest.target}</span>
                             </div>
@@ -418,8 +418,8 @@ export const Inventory = () => {
               {!targetUser ? (
                 <div className="space-y-6">
                   <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
-                    <input 
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+                    <input aria-label="Поиск игрока по имени..." 
                       type="text"
                       placeholder="Поиск игрока по имени..."
                       value={searchQuery}
@@ -438,11 +438,11 @@ export const Inventory = () => {
                       >
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-full bg-brand-primary/20 flex items-center justify-center overflow-hidden border border-white/10">
-                            {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <User className="w-6 h-6 text-brand-primary" />}
+                            {user.avatar ? <img alt="" src={user.avatar} className="w-full h-full object-cover" /> : <User className="w-6 h-6 text-brand-primary" />}
                           </div>
                           <span className="font-bold text-white">{user.username}</span>
                         </div>
-                        <ArrowRight className="w-5 h-5 text-white/20 group-hover:text-brand-primary transition-colors" />
+                        <ArrowRight className="w-5 h-5 text-white/50 group-hover:text-brand-primary transition-colors" />
                       </button>
                     ))}
                   </div>
@@ -452,7 +452,7 @@ export const Inventory = () => {
                   <div className="flex items-center justify-between p-4 bg-brand-primary/10 rounded-2xl border border-brand-primary/20">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-brand-primary/20 flex items-center justify-center overflow-hidden">
-                        {targetUser.avatar ? <img src={targetUser.avatar} className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-brand-primary" />}
+                        {targetUser.avatar ? <img alt="" src={targetUser.avatar} className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-brand-primary" />}
                       </div>
                       <span className="font-bold text-white">Обмен с {targetUser.username}</span>
                     </div>
@@ -489,7 +489,7 @@ export const Inventory = () => {
                     {}
                     <div className="space-y-4">
                       <h4 className="text-sm font-bold text-white/40 uppercase tracking-widest">Предметы игрока</h4>
-                      <p className="text-[10px] text-white/20 italic">Примечание: Вы запрашиваете эти предметы у игрока.</p>
+                      <p className="text-[11px] text-white/50 italic">Примечание: Вы запрашиваете эти предметы у игрока.</p>
                       <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                         {ALL_ITEMS.slice(0, 12).map((item, i) => (
                           <button
@@ -566,7 +566,7 @@ export const Inventory = () => {
 
                 <div>
                   <div className="flex items-center justify-center gap-2 mb-1">
-                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                    <span className={`text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
                       selectedItem.rarity === 'legendary' ? 'bg-amber-500/20 text-amber-500' :
                       selectedItem.rarity === 'epic' ? 'bg-emerald-500/20 text-emerald-500' :
                       selectedItem.rarity === 'rare' ? 'bg-teal-500/20 text-teal-500' :
@@ -708,7 +708,7 @@ export const Inventory = () => {
               </div>
               
               <div className="relative">
-                <input 
+                <input aria-label="Цена" 
                   type="number"
                   value={marketPrice}
                   onChange={(e) => setMarketPrice(Number(e.target.value))}

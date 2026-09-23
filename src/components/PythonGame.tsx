@@ -170,7 +170,7 @@ export const PythonGame: React.FC<GameProps> = ({ lesson, onComplete, onMistake 
             className="bg-[#080d10] rounded-2xl p-8 font-mono text-base mb-8 border border-white/10 relative overflow-hidden shadow-2xl"
           >
             <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-brand-primary to-brand-secondary" />
-            <div className="flex items-center gap-2 text-white/30 mb-4 pb-4 border-b border-white/5">
+            <div className="flex items-center gap-2 text-white/55 mb-4 pb-4 border-b border-white/5">
               <div className="w-3 h-3 rounded-full bg-red-500/50" />
               <div className="w-3 h-3 rounded-full bg-amber-500/50" />
               <div className="w-3 h-3 rounded-full bg-emerald-500/50" />
@@ -184,7 +184,7 @@ export const PythonGame: React.FC<GameProps> = ({ lesson, onComplete, onMistake 
                     <span className="text-teal-300/90">{part}</span>
                     {i < arr.length - 1 && (
                       <div className="relative inline-block">
-                        <input
+                        <input aria-label="Ваш ответ"
                           ref={i === 0 ? inputRef : null}
                           type="text"
                           value={userInput}

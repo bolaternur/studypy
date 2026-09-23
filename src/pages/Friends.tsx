@@ -127,7 +127,7 @@ export const Friends = () => {
                  <Search className="w-5 h-5 text-brand-primary" /> Найти напарника
                </h3>
                <form onSubmit={handleSearch} className="relative z-10 space-y-4">
-                 <input 
+                 <input aria-label="Поиск по нику" 
                    type="text" 
                    value={searchUsername}
                    onChange={e => {
@@ -162,7 +162,7 @@ export const Friends = () => {
                            </div>
                            <div>
                              <p className="font-bold text-sm text-white">{user.username}</p>
-                             <p className="text-[10px] text-white/40 uppercase tracking-widest">Ур. {user.level || 1}</p>
+                             <p className="text-[11px] text-white/40 uppercase tracking-widest">Ур. {user.level || 1}</p>
                            </div>
                          </div>
                          <button 
@@ -203,7 +203,7 @@ export const Friends = () => {
                       <div key={req.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between group hover:border-emerald-500/30 transition-all">
                         <div>
                           <p className="font-bold text-lg text-white">{req.senderName}</p>
-                          <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Хочет дружить</p>
+                          <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest mt-1">Хочет дружить</p>
                         </div>
                         <div className="flex gap-2">
                           <button onClick={() => handleAccept(req)} className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center hover:bg-emerald-500 hover:text-black transition-all hover:scale-105">
@@ -263,7 +263,7 @@ export const Friends = () => {
                          </div>
                          <div className="flex-1">
                            <div className="font-black text-xl mb-1 text-white group-hover:text-brand-primary transition-colors">{friend.username}</div>
-                           <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-white/40">
+                           <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-widest text-white/40">
                              <span className="flex items-center gap-1.5 text-emerald-400">
                                <Star className="w-3.5 h-3.5" /> Уровень {friend.level || 1}
                              </span>
