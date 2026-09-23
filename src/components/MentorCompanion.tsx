@@ -1,69 +1,256 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, BrainCircuit, MessageSquareCode, GraduationCap, Loader2, X, Terminal, Code2, Lightbulb, Zap, History } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { playSound } from '../utils/sounds';
-import { getMentorHint } from '../services/gemini';
+import {
+  ArrowRight, BookOpen, BrainCircuit, GraduationCap, Loader2, Send, Sparkles, X, Zap,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useAuth } from '../contexts/AuthContext';
+import { playSound } from '../utils/sounds';
+import { askMentorAnonymously, getMentorChat, getMentorHint, type MentorSource } from '../services/gemini';
+import { SUGGESTED_QUESTIONS } from '../constants/mentor-knowledge';
+
+interface Turn {
+  id: string;
+  role: 'user' | 'mentor';
+  content: string;
+  source?: MentorSource;
+  lessonId?: string;
+}
+
+const WELCOME =
+  'Привет! Я помогу разобраться с Python. Спросите про списки, циклы, функции или вставьте текст ошибки — ' +
+  'я объясню, что она значит.';
+
+/**
+ * Renders the small subset of Markdown the mentor actually produces:
+ * fenced code blocks, `inline code` and **bold**.
+ *
+ * A full Markdown renderer would be a dependency and an XSS surface for a
+ * handful of constructs; this builds React nodes directly, so nothing is ever
+ * injected as HTML.
+ */
+const RichText = ({ text }: { text: string }) => {
+  const segments = text.split(/```(?:python)?\n?/);
+
+  return (
+    <div className="space-y-3">
+      {segments.map((segment, index) => {
+        if (!segment) return null;
+
+        // Odd indices sit between fences, so they are code.
+        if (index % 2 === 1) {
+          return (
+            <pre
+              key={index}
+              className="overflow-x-auto rounded-xl border border-hairline bg-black/50 p-3 font-mono text-[11px] leading-relaxed text-emerald-200"
+            >
+              <code>{segment.replace(/\n$/, '')}</code>
+            </pre>
+          );
+        }
+
+        return (
+          <p key={index} className="whitespace-pre-wrap text-sm leading-relaxed text-ink-70">
+            {segment.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, partIndex) => {
+              if (part.startsWith('**') && part.endsWith('**')) {
+                return (
+                  <strong key={partIndex} className="font-semibold text-ink-100">
+                    {part.slice(2, -2)}
+                  </strong>
+                );
+              }
+              if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+                return (
+                  <code
+                    key={partIndex}
+                    className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[12px] text-emerald-200"
+                  >
+                    {part.slice(1, -1)}
+                  </code>
+                );
+              }
+              return <React.Fragment key={partIndex}>{part}</React.Fragment>;
+            })}
+          </p>
+        );
+      })}
+    </div>
+  );
+};
+
+const SourceTag = ({ source }: { source: MentorSource }) =>
+  source === 'ai' ? (
+    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-teal-300/70">
+      <Sparkles className="h-3 w-3" aria-hidden="true" /> ИИ
+    </span>
+  ) : (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-ink-30"
+      title="Ответ собран из встроенной базы знаний, без обращения к ИИ"
+    >
+      <BookOpen className="h-3 w-3" aria-hidden="true" /> База знаний
+    </span>
+  );
+
 export const MentorCompanion = React.memo(() => {
-  const { userProfile, lastCodeResult, currentCode, currentChallenge } = useAuth();
+  const { currentUser, userProfile, lastCodeResult, currentCode, currentChallenge } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [mentorHint, setMentorHint] = useState('');
-  const [isMentorLoading, setIsMentorLoading] = useState(false);
-  const [history, setHistory] = useState<{ role: 'user' | 'mentor', content: string }[]>([]);
-  const [activeTab, setActiveTab] = useState<'chat' | 'analysis' | 'history'>('chat');
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [draft, setDraft] = useState('');
+  const [isBusy, setIsBusy] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const nextId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   useEffect(() => {
-    if (lastCodeResult) {
-      if (lastCodeResult.success) {
-        setMessage('Отличная работа! Твой код прошел все тесты. Хочешь узнать, как его можно оптимизировать?');
-      } else {
-        setMessage('Похоже, возникла ошибка. Не волнуйся, я помогу тебе разобраться!');
-      }
-      
-    }
-  }, [lastCodeResult]);
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [turns, isBusy]);
 
-  const handleGetHint = async () => {
-    if (!currentChallenge) {
-      toast.error('Сначала выбери задачу!');
-      return;
+  useEffect(() => {
+    if (isOpen) {
+      setHasUnread(false);
+      inputRef.current?.focus();
     }
-    
-    setIsMentorLoading(true);
+  }, [isOpen]);
+
+  // Other screens (a stuck lesson, for instance) can summon the mentor.
+  useEffect(() => {
+    const open = () => setIsOpen(true);
+    window.addEventListener('open-mentor', open);
+    return () => window.removeEventListener('open-mentor', open);
+  }, []);
+
+  // Escape closes the panel wherever focus is.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen]);
+
+  // A finished code run is the one moment the mentor has something unprompted
+  // to say, so that is the only time the badge appears.
+  useEffect(() => {
+    if (lastCodeResult && !isOpen) setHasUnread(true);
+  }, [lastCodeResult, isOpen]);
+
+  const requireLogin = (): boolean => {
+    if (currentUser) return false;
+    toast.error('Войдите в аккаунт, чтобы спросить ментора.');
+    window.dispatchEvent(new CustomEvent('open-auth-modal'));
+    return true;
+  };
+
+  const pushMentorTurn = (reply: { text: string; source: MentorSource; lessonId?: string }) => {
+    setTurns((prev) => [
+      ...prev,
+      { id: nextId(), role: 'mentor', content: reply.text, source: reply.source, lessonId: reply.lessonId },
+    ]);
+  };
+
+  const ask = async (question: string) => {
+    const trimmed = question.trim();
+    if (!trimmed || isBusy) return;
+
+    const history = [...turns, { id: nextId(), role: 'user' as const, content: trimmed }];
+    setTurns(history);
+    setDraft('');
+    setIsBusy(true);
+
     try {
-      const hint = await getMentorHint(currentCode, currentChallenge);
-      setMentorHint(hint);
-      setHistory(prev => [...prev, { role: 'mentor', content: hint }]);
-      playSound('success');
-    } catch (err) {
-      toast.error('Ошибка связи с ИИ-модулем');
+      // Without an account the question goes to the public knowledge-base
+      // route: no model call, nothing to authorise, so there is no reason to
+      // make someone register before asking what a list is.
+      const reply = currentUser
+        ? await getMentorChat(
+            history
+              .filter((turn): turn is Turn => turn.role === 'user' || turn.role === 'mentor')
+              .map((turn) => ({
+                role: turn.role === 'user' ? ('user' as const) : ('assistant' as const),
+                content: turn.content,
+              })),
+            { username: userProfile?.username, level: userProfile?.level },
+          )
+        : await askMentorAnonymously(trimmed);
+      pushMentorTurn(reply);
+      playSound('message');
+    } catch (error) {
+      pushMentorTurn({
+        text:
+          'Не удалось связаться с сервером. Проверьте соединение и попробуйте ещё раз — ' +
+          'ваш вопрос никуда не делся.',
+        source: 'offline',
+      });
+      console.error('Mentor chat failed:', error);
     } finally {
-      setIsMentorLoading(false);
+      setIsBusy(false);
     }
   };
 
-  const analyzeCode = async () => {
-    if (!currentCode || currentCode.trim().length < 5) {
-      toast.error('Напиши хотя бы немного кода для анализа!');
+  /** Asks for a hint about the challenge the editor currently holds. */
+  const requestHint = async () => {
+    if (isBusy) return;
+    if (!currentChallenge) {
+      toast.error('Откройте задачу — тогда я смогу подсказать по ней.');
       return;
     }
+    if (requireLogin()) return;
 
-    setIsMentorLoading(true);
+    setTurns((prev) => [...prev, { id: nextId(), role: 'user', content: 'Дай подсказку по задаче' }]);
+    setIsBusy(true);
     try {
-      const analysis = await getMentorHint(currentCode, { 
-        title: 'Code Analysis', 
-        description: 'Analyze this code for best practices, PEP 8 compliance, and potential optimizations.' 
-      } as any);
-      setMentorHint(analysis);
-      setHistory(prev => [...prev, { role: 'mentor', content: analysis }]);
+      const reply = await getMentorHint(
+        currentCode,
+        currentChallenge,
+        lastCodeResult?.success === false ? lastCodeResult.message : undefined,
+      );
+      pushMentorTurn(reply);
       playSound('success');
-    } catch (err) {
-      toast.error('Ошибка анализа');
+    } catch (error) {
+      pushMentorTurn({ text: 'Не получилось получить подсказку. Попробуйте ещё раз.', source: 'offline' });
+      console.error('Mentor hint failed:', error);
     } finally {
-      setIsMentorLoading(false);
+      setIsBusy(false);
+    }
+  };
+
+  /**
+   * Asks for a review of whatever is in the editor.
+   *
+   * `challenge` is a plain sentence, not an object — the previous version
+   * passed `{ title, description }` here, which the server rejected with 400,
+   * so this action never once worked.
+   */
+  const reviewCode = async () => {
+    if (isBusy) return;
+    if (!currentCode || currentCode.trim().length < 5) {
+      toast.error('Напишите немного кода, и я его разберу.');
+      return;
+    }
+    if (requireLogin()) return;
+
+    setTurns((prev) => [...prev, { id: nextId(), role: 'user', content: 'Разбери мой код' }]);
+    setIsBusy(true);
+    try {
+      const reply = await getMentorHint(
+        currentCode,
+        'Разбери этот код: читаемость, имена переменных, соответствие PEP 8 и возможные улучшения.',
+      );
+      pushMentorTurn(reply);
+      playSound('success');
+    } catch (error) {
+      pushMentorTurn({ text: 'Не получилось разобрать код. Попробуйте ещё раз.', source: 'offline' });
+      console.error('Mentor review failed:', error);
+    } finally {
+      setIsBusy(false);
     }
   };
 
@@ -72,180 +259,174 @@ export const MentorCompanion = React.memo(() => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20, x: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20, x: 20 }}
-            className="absolute bottom-24 right-0 w-[450px] glass rounded-[40px] p-0 border border-white/10 shadow-[0_20px_100px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col max-h-[600px]"
+            ref={panelRef}
+            role="dialog"
+            aria-label="ИИ-ментор"
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 16 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="glass glass-lit absolute bottom-24 right-0 flex max-h-[min(640px,80vh)] w-[min(440px,calc(100vw-4rem))] flex-col overflow-hidden rounded-[28px] shadow-[0_30px_100px_-30px_rgba(0,0,0,0.9)]"
           >
-            {}
-            <div className="p-8 bg-gradient-to-r from-brand-primary/20 to-emerald-500/20 border-b border-white/10">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-primary/20 flex items-center justify-center border border-brand-primary/30">
-                    <GraduationCap className="w-6 h-6 text-brand-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black tracking-tight">ИИ Ментор</h3>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Онлайн</span>
-                    </div>
-                  </div>
+            <header className="flex items-center justify-between border-b border-hairline px-6 py-5">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-400/15">
+                  <GraduationCap className="h-5 w-5 text-emerald-300" aria-hidden="true" />
                 </div>
-                <button 
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-white/10 rounded-xl transition-all"
-                >
-                  <X className="w-5 h-5 text-white/40" />
-                </button>
+                <div>
+                  <h2 className="text-base font-semibold tracking-tight">Ментор</h2>
+                  <p className="text-[11px] text-ink-30">Помощь по Python</p>
+                </div>
               </div>
-            </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label="Закрыть ментора"
+                className="rounded-xl p-2 text-ink-30 transition-colors hover:bg-white/5 hover:text-ink-100"
+              >
+                <X className="h-4.5 w-4.5" aria-hidden="true" />
+              </button>
+            </header>
 
-            {}
-            <div className="flex border-b border-white/5 p-2 gap-2">
-              {[
-                { id: 'chat', label: 'Чат', icon: MessageSquareCode },
-                { id: 'analysis', label: 'Анализ', icon: BrainCircuit },
-                { id: 'history', label: 'История', icon: History }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${
-                    activeTab === tab.id ? 'bg-white/10 text-brand-primary' : 'text-white/40 hover:bg-white/5'
-                  }`}
-                >
-                  <tab.icon className="w-3 h-3" />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {}
-            <div className="flex-grow overflow-y-auto p-8 custom-scrollbar space-y-6">
-              {activeTab === 'chat' && (
+            <div ref={scrollRef} className="flex-grow space-y-5 overflow-y-auto px-6 py-5">
+              {turns.length === 0 && (
                 <>
-                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-sm leading-relaxed text-white/70 font-medium italic">
-                    {message || 'Привет! Я твой персональный ИИ-ментор. Я помогу тебе освоить Python, дам подсказки по задачам и проанализирую твой код. С чего начнем?'}
+                  <div className="rounded-2xl border border-hairline bg-white/[0.03] p-4">
+                    <p className="text-sm leading-relaxed text-ink-70">{WELCOME}</p>
                   </div>
-
-                  {mentorHint && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="p-6 rounded-3xl bg-brand-primary/10 border border-brand-primary/20 space-y-4"
-                    >
-                      <div className="flex items-center gap-2 text-brand-primary">
-                        <Lightbulb className="w-4 h-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Подсказка</span>
-                      </div>
-                      <p className="text-sm text-white/80 leading-relaxed font-medium">
-                        {mentorHint}
-                      </p>
-                    </motion.div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <button 
-                      onClick={handleGetHint}
-                      disabled={isMentorLoading}
-                      className="py-4 bg-brand-primary text-black font-black rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 transition-all disabled:opacity-50"
-                    >
-                      {isMentorLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                      Дай подсказку
-                    </button>
-                    <button 
-                      onClick={analyzeCode}
-                      disabled={isMentorLoading}
-                      className="py-4 bg-white/5 border border-white/10 text-white font-black rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/10 transition-all disabled:opacity-50"
-                    >
-                      {isMentorLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-                      Анализ кода
-                    </button>
+                  <div className="space-y-2">
+                    <p className="type-eyebrow">попробуйте спросить</p>
+                    {SUGGESTED_QUESTIONS.map((question) => (
+                      <button
+                        key={question}
+                        type="button"
+                        onClick={() => void ask(question)}
+                        className="block w-full rounded-xl border border-hairline px-3.5 py-2.5 text-left text-[13px] text-ink-50 transition-colors hover:border-emerald-400/40 hover:text-ink-100"
+                      >
+                        {question}
+                      </button>
+                    ))}
                   </div>
                 </>
               )}
 
-              {activeTab === 'analysis' && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20">
-                    <Terminal className="w-5 h-5 text-teal-400" />
-                    <span className="text-xs font-bold text-teal-400">Статус кода: {!lastCodeResult ? 'Ожидание кода' : lastCodeResult.success ? 'Валиден' : 'Требует правок'}</span>
+              {turns.map((turn) =>
+                turn.role === 'user' ? (
+                  <div key={turn.id} className="flex justify-end">
+                    <p className="max-w-[85%] rounded-2xl rounded-br-md bg-emerald-400/15 px-4 py-2.5 text-sm text-ink-100">
+                      {turn.content}
+                    </p>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <h4 className="text-[10px] font-black text-white/30 uppercase tracking-widest">Рекомендации</h4>
-                    {[
-                      'Используй более описательные имена переменных',
-                      'Добавь комментарии к сложным участкам кода',
-                      'Следи за отступами (PEP 8)',
-                      'Рассмотри использование генераторов списков'
-                    ].map((rec, i) => (
-                      <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-white/5 border border-white/5">
-                        <div className="w-5 h-5 rounded-full bg-brand-primary/20 flex items-center justify-center text-[10px] font-black text-brand-primary shrink-0">{i+1}</div>
-                        <p className="text-xs text-white/60 font-medium">{rec}</p>
-                      </div>
-                    ))}
+                ) : (
+                  <div key={turn.id} className="rounded-2xl border border-hairline bg-white/[0.03] p-4">
+                    <div className="mb-2.5">
+                      <SourceTag source={turn.source ?? 'offline'} />
+                    </div>
+                    <RichText text={turn.content} />
+                    {turn.lessonId && (
+                      <Link
+                        to={`/lesson/${turn.lessonId}`}
+                        onClick={() => setIsOpen(false)}
+                        className="mt-3.5 inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-300 hover:text-emerald-200"
+                      >
+                        Открыть урок
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Link>
+                    )}
                   </div>
-                </div>
+                ),
               )}
 
-              {activeTab === 'history' && (
-                <div className="space-y-4">
-                  {history.length === 0 ? (
-                    <div className="text-center py-12 text-white/20 italic text-sm">История пуста</div>
-                  ) : (
-                    history.map((item, i) => (
-                      <div key={i} className={`p-4 rounded-2xl border ${item.role === 'mentor' ? 'bg-brand-primary/5 border-brand-primary/10' : 'bg-white/5 border-white/5'}`}>
-                        <div className="text-[8px] font-black uppercase tracking-widest mb-2 opacity-40">{item.role === 'mentor' ? 'Ментор' : 'Вы'}</div>
-                        <p className="text-xs text-white/70 leading-relaxed">{item.content}</p>
-                      </div>
-                    ))
-                  )}
+              {isBusy && (
+                <div className="flex items-center gap-2.5 text-ink-30" role="status">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  <span className="text-xs">Думаю…</span>
                 </div>
               )}
             </div>
 
-            {}
-            <div className="p-6 border-t border-white/10 bg-black/20">
-              <div className="relative">
-                <input 
-                  type="text"
-                  placeholder="Задай вопрос ментору..."
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-brand-primary/50 transition-all pr-12"
-                />
-                <button className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-brand-primary hover:scale-110 transition-all">
-                  <Zap className="w-5 h-5 fill-current" />
+            <div className="border-t border-hairline px-6 py-4">
+              <div className="mb-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => void requestHint()}
+                  disabled={isBusy}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-hairline py-2.5 text-xs font-medium text-ink-70 transition-colors hover:border-emerald-400/40 hover:text-ink-100 disabled:opacity-40"
+                >
+                  <Zap className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+                  Подсказка
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void reviewCode()}
+                  disabled={isBusy}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-hairline py-2.5 text-xs font-medium text-ink-70 transition-colors hover:border-emerald-400/40 hover:text-ink-100 disabled:opacity-40"
+                >
+                  <BrainCircuit className="h-3.5 w-3.5 text-teal-300" aria-hidden="true" />
+                  Разбор кода
                 </button>
               </div>
+
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void ask(draft);
+                }}
+                className="relative"
+              >
+                <label htmlFor="mentor-question" className="sr-only">
+                  Вопрос ментору
+                </label>
+                <input
+                  id="mentor-question"
+                  ref={inputRef}
+                  type="text"
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  disabled={isBusy}
+                  placeholder="Спросите что-нибудь про Python…"
+                  className="w-full rounded-2xl border border-hairline bg-white/[0.04] py-3.5 pl-4 pr-12 text-sm transition-colors focus:border-emerald-400/50 focus:outline-none disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={isBusy || draft.trim().length === 0}
+                  aria-label="Отправить вопрос"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl p-2.5 text-emerald-300 transition-colors hover:bg-emerald-400/10 disabled:opacity-30"
+                >
+                  <Send className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </form>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        type="button"
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.94 }}
         onClick={() => {
-          setIsOpen(!isOpen);
+          setIsOpen((open) => !open);
           playSound('click');
         }}
-        className={`w-16 h-16 rounded-full glass border-2 flex items-center justify-center text-3xl shadow-2xl transition-all relative group ${isOpen ? 'border-brand-primary bg-brand-primary/20' : 'border-white/10 hover:border-brand-primary/50'}`}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? 'Закрыть ментора' : 'Открыть ментора'}
+        className={`relative flex h-14 w-14 items-center justify-center rounded-full border transition-colors ${
+          isOpen
+            ? 'border-emerald-400/60 bg-emerald-400/20'
+            : 'border-hairline bg-surface-2/80 backdrop-blur-md hover:border-emerald-400/40'
+        }`}
       >
-        <div className="absolute inset-0 bg-brand-primary/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-        <GraduationCap className={`w-8 h-8 transition-all ${isOpen ? 'text-brand-primary scale-110' : 'text-white/40'}`} />
-        
-        {}
-        {lastCodeResult && !isOpen && (
-          <motion.div 
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center border-2 border-bg-dark"
-          >
-            <Sparkles className="w-3 h-3 text-white" />
-          </motion.div>
+        <GraduationCap
+          className={`h-6 w-6 transition-colors ${isOpen ? 'text-emerald-300' : 'text-ink-50'}`}
+          aria-hidden="true"
+        />
+        {hasUnread && (
+          <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-bg-dark bg-emerald-400" />
         )}
       </motion.button>
     </div>
   );
 });
+
+MentorCompanion.displayName = 'MentorCompanion';

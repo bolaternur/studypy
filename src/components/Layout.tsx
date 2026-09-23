@@ -6,7 +6,6 @@ import {
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LevelUpModal } from './LevelUpModal';
-import { FloatingChat } from './FloatingChat';
 import { playSound, toggleMute, getIsMuted } from '../utils/sounds';
 import { SocialPanel } from './SocialPanel';
 import { calculateRank, getRankColor } from '../utils/ranks';

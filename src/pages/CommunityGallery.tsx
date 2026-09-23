@@ -227,6 +227,24 @@ export const CommunityGallery = () => {
     }
   }, []);
 
+  /**
+   * Copies a deep link to the snippet.
+   *
+   * `navigator.clipboard` needs a secure context and can be blocked by
+   * permissions policy, so the URL is shown in the toast as a fallback the
+   * reader can select by hand.
+   */
+  const handleShare = React.useCallback(async (snippetId: string) => {
+    const url = `${window.location.origin}/gallery?snippet=${encodeURIComponent(snippetId)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Ссылка скопирована');
+      playSound('click');
+    } catch {
+      toast.info(url, { duration: 10000, description: 'Скопируйте ссылку вручную' });
+    }
+  }, []);
+
   const handleStar = React.useCallback(async (snippetId: string) => {
     if (!userProfile) {
       toast.error('Войдите, чтобы ставить звезды!');
@@ -544,8 +562,13 @@ export const CommunityGallery = () => {
                       >
                         <Heart className={`w-6 h-6 ${selectedSnippet.likes > 0 ? 'fill-red-400 text-red-400' : 'text-white/20 group-hover:text-red-400'}`} />
                       </button>
-                      <button className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-primary/50 transition-all group">
-                        <Share2 className="w-6 h-6 text-white/20 group-hover:text-brand-primary" />
+                      <button
+                        type="button"
+                        onClick={() => void handleShare(selectedSnippet.id)}
+                        aria-label="Скопировать ссылку на решение"
+                        className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-emerald-400/50 transition-all group"
+                      >
+                        <Share2 className="w-6 h-6 text-white/20 group-hover:text-emerald-300" aria-hidden="true" />
                       </button>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Star, Trophy, Zap } from 'lucide-react';
 import { UserProfile, useAuth } from '../contexts/AuthContext';
@@ -179,9 +180,12 @@ export const Leaderboard = () => {
               <p className="text-white/50 text-sm">Решай задачи, проходи уроки и зарабатывай XP!</p>
             </div>
           </div>
-          <MagneticButton className="px-8 py-4 bg-white text-black rounded-full font-bold hover:bg-white/90 transition-all">
+          <Link
+            to="/pathways"
+            className="px-8 py-4 bg-emerald-400 text-[#04070a] rounded-full font-bold hover:scale-[1.03] transition-transform"
+          >
             Начать обучение
-          </MagneticButton>
+          </Link>
         </div>
       </div>
 

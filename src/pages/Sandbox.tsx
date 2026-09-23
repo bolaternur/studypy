@@ -64,6 +64,13 @@ const TIPS = [
   "Декораторы (@) — мощный способ добавить функциональность к функции без изменения её кода.",
 ];
 
+interface SessionMessage {
+  userId: string;
+  author: string;
+  text: string;
+  at: number;
+}
+
 export const Sandbox = React.memo(() => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -72,7 +79,10 @@ export const Sandbox = React.memo(() => {
   const [copied, setCopied] = useState(false);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [usersCount, setUsersCount] = useState(1);
+  const [chatMessages, setChatMessages] = useState<SessionMessage[]>([]);
+  const [chatDraft, setChatDraft] = useState('');
   const socketRef = useRef<Socket | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id || !currentUser) return;
@@ -92,6 +102,10 @@ export const Sandbox = React.memo(() => {
       socket.on('remote_update', ({ code: newCode }: { code: string }) => {
         setCode(newCode);
       });
+      socket.on('sandbox_message', (message: SessionMessage) => {
+        // Keep the transcript bounded: this is a live relay, not history.
+        setChatMessages((prev) => [...prev, message].slice(-50));
+      });
       socket.on('connect_error', () => {
         toast.error('Не удалось безопасно подключиться к совместной сессии.');
       });
@@ -107,6 +121,18 @@ export const Sandbox = React.memo(() => {
       socket?.disconnect();
     };
   }, [currentUser, id]);
+
+  const sendChatMessage = React.useCallback((event: React.FormEvent) => {
+    event.preventDefault();
+    const text = chatDraft.trim();
+    if (!text || !socketRef.current || !id) return;
+    socketRef.current.emit('sandbox_chat', { roomId: id, text });
+    setChatDraft('');
+  }, [chatDraft, id]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   const handleCodeChange = React.useCallback((newCode: string) => {
     setCode(newCode);
@@ -258,17 +284,43 @@ export const Sandbox = React.memo(() => {
                       <MessageSquare className="w-3.5 h-3.5" /> Чат сессии
                     </h3>
                     <div className="h-32 overflow-y-auto custom-scrollbar space-y-2 mb-3">
-                      <div className="p-2.5 rounded-xl bg-white/5">
-                        <div className="text-[10px] font-bold text-brand-primary mb-1">Система</div>
-                        <div className="text-xs text-white/60">Сессия активна. Пригласи друзей!</div>
-                      </div>
+                      {chatMessages.length === 0 ? (
+                        <div className="p-2.5 rounded-xl bg-white/5">
+                          <div className="text-[10px] font-bold text-emerald-300 mb-1">Система</div>
+                          <div className="text-xs text-white/60">
+                            Сессия активна. Отправьте ссылку — сообщения увидят все участники.
+                          </div>
+                        </div>
+                      ) : (
+                        chatMessages.map((message) => (
+                          <div key={`${message.userId}-${message.at}`} className="p-2.5 rounded-xl bg-white/5">
+                            <div className="text-[10px] font-bold text-emerald-300 mb-1">{message.author}</div>
+                            <div className="text-xs text-white/70 break-words">{message.text}</div>
+                          </div>
+                        ))
+                      )}
+                      <div ref={chatEndRef} />
                     </div>
-                    <div className="relative">
-                      <input type="text" placeholder="Сообщение..." className="w-full pl-3 pr-8 py-2 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-brand-primary/50 text-xs transition-all" />
-                      <button className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-primary">
-                        <ArrowRight className="w-3.5 h-3.5" />
+                    <form onSubmit={sendChatMessage} className="relative">
+                      <label htmlFor="session-chat" className="sr-only">Сообщение в чат сессии</label>
+                      <input
+                        id="session-chat"
+                        type="text"
+                        value={chatDraft}
+                        onChange={(event) => setChatDraft(event.target.value)}
+                        maxLength={500}
+                        placeholder="Сообщение..."
+                        className="w-full pl-3 pr-8 py-2 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-emerald-400/50 text-xs transition-all"
+                      />
+                      <button
+                        type="submit"
+                        disabled={chatDraft.trim().length === 0}
+                        aria-label="Отправить сообщение"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-300 disabled:opacity-30"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
-                    </div>
+                    </form>
                   </div>
                 )}
 

@@ -170,10 +170,14 @@ export const LessonDetail = () => {
             <div className="glass rounded-3xl p-8 bg-brand-primary/5 border-brand-primary/20">
               <h3 className="text-lg font-bold mb-4">Нужна помощь?</h3>
               <p className="text-sm text-white/50 mb-6">
-                Застряли на испытании? Присоединяйтесь к нашему сообществу из 50 000+ учеников.
+                Застряли? Спросите ментора — он объяснит тему урока и разберёт текст ошибки.
               </p>
-              <button className="w-full py-3 glass rounded-xl text-sm font-bold hover:bg-white/10 transition-all">
-                Вступить в Discord
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-mentor'))}
+                className="w-full py-3 glass rounded-xl text-sm font-bold hover:bg-white/10 transition-all"
+              >
+                Открыть ментора
               </button>
             </div>
           </div>

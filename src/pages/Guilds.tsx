@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Users, Trophy, Sparkles, Plus, LogOut, Swords, Star, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -198,9 +199,12 @@ export const Guilds = () => {
               </div>
               
               <div className="w-full lg:w-80 space-y-4">
-                <button className="w-full py-5 rounded-2xl bg-white/5 border border-white/10 font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/30 transition-all">
-                  <Swords className="w-4 h-4" /> Рейдовая Комната
-                </button>
+                <Link
+                  to="/boss-arena"
+                  className="w-full py-5 rounded-2xl bg-white/5 border border-white/10 font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-emerald-400/15 hover:text-emerald-300 hover:border-emerald-400/30 transition-all"
+                >
+                  <Swords className="w-4 h-4" /> Испытания
+                </Link>
                 <button 
                   onClick={handleLeaveGuild}
                   className="w-full py-4 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all"

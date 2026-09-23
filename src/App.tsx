@@ -10,6 +10,7 @@ import { Navbar } from './components/Layout';
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ServiceNotice } from './components/ServiceNotice';
 import { MentorCompanion } from './components/MentorCompanion';
 import { PetCompanion } from './components/PetCompanion';
 import { QuestSidebar } from './components/QuestSidebar';
@@ -350,6 +351,8 @@ const AppContent = () => {
           <Footer onOpenLegal={setLegalDocumentId} />
         </div>
       </div>
+
+      <ServiceNotice />
 
       {!performanceSettings.lowPerfMode && <div className="grain" aria-hidden="true" />}
 

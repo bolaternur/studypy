@@ -68,7 +68,7 @@ export const PetCompanion = React.memo(() => {
     setMentorHint('');
     try {
       const hint = await getMentorHint(currentCode, currentChallenge);
-      setMentorHint(hint);
+      setMentorHint(hint.text);
       toast.info('Питомец запросил подсказку у ИИ-ментора.', { icon: '🧠' });
       playSound('success');
     } catch (err) {

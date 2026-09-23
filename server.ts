@@ -11,6 +11,7 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import firebaseConfig from "./firebase-applet-config.json";
 import { LESSONS } from "./src/constants/lessons";
 import { PERKS } from "./src/constants/perks";
+import { answerFromKnowledge, type LessonIndexEntry } from "./src/constants/mentor-knowledge";
 import "dotenv/config";
 
 type RoomType = "duel" | "sandbox";
@@ -59,6 +60,13 @@ const SHOP_CATALOG = new Map([
   ["premium_avatar_1", { name: "Золотая рамка", price: 1000 }],
 ]);
 const LESSON_IDS = new Set(LESSONS.map((lesson) => lesson.id));
+// Title/description only — the mentor's offline retrieval never needs
+// the full lesson bodies, and keeping the index small keeps it fast.
+const LESSON_INDEX: LessonIndexEntry[] = LESSONS.map((lesson) => ({
+  id: lesson.id,
+  title: lesson.title,
+  description: lesson.description,
+}));
 const LESSON_XP_REWARD = 50;
 const LESSON_COIN_REWARD = 50;
 const ARCADE_REWARDS = new Map([
@@ -326,6 +334,84 @@ const rateLimit = (scope: string, maxRequests: number, windowMs: number): expres
   next();
 };
 
+interface MentorReply {
+  text: string;
+  source: "ai" | "offline";
+  lessonId?: string;
+}
+
+/**
+ * Answers a chat message without Gemini.
+ *
+ * Every reply is marked `source: "offline"` so the interface can say plainly
+ * that this came from a local knowledge base, not from a model.
+ */
+const offlineChat = (question: string): MentorReply => {
+  const answer = answerFromKnowledge(question, LESSON_INDEX);
+  return { text: answer.text, source: "offline", lessonId: answer.lessonId };
+};
+
+/**
+ * Builds a hint without Gemini.
+ *
+ * A runtime error message is the strongest signal available, so it is consulted
+ * first; the challenge text is the fallback query. When neither matches
+ * anything known, the learner gets a concrete debugging checklist rather than
+ * an apology.
+ */
+const offlineHint = (challenge: string, code: string, error?: string): MentorReply => {
+  if (error && error.trim().length > 0) {
+    const fromError = answerFromKnowledge(error, LESSON_INDEX);
+    if (fromError.matched) {
+      return {
+        text: `Смотрю на вашу ошибку.
+
+${fromError.text}`,
+        source: "offline",
+        lessonId: fromError.lessonId,
+      };
+    }
+  }
+
+  const fromChallenge = answerFromKnowledge(challenge, LESSON_INDEX);
+  if (fromChallenge.matched) {
+    return {
+      text: `По теме этой задачи:
+
+${fromChallenge.text}`,
+      source: "offline",
+      lessonId: fromChallenge.lessonId,
+    };
+  }
+
+  const hasPrint = /\bprint\s*\(/.test(code);
+  const hasReturn = /\breturn\b/.test(code);
+  const hasDef = /\bdef\s+\w+/.test(code);
+
+  const checklist: string[] = [];
+  if (hasDef && !hasReturn && hasPrint) {
+    checklist.push(
+      "В функции есть `print`, но нет `return`. Проверяющая система смотрит на **возвращаемое** значение — " +
+      "печать на экран она не засчитывает.",
+    );
+  }
+  if (hasDef && !hasReturn && !hasPrint) {
+    checklist.push("Функция объявлена, но ничего не возвращает — добавьте `return` с результатом.");
+  }
+  if (!hasDef && challenge.length > 0) {
+    checklist.push("Убедитесь, что функция названа ровно так, как требует условие задачи.");
+  }
+  checklist.push("Сверьте вывод с ожидаемым посимвольно: лишний пробел или другой регистр — уже несовпадение.");
+  checklist.push("Проверьте граничные случаи: пустой список, ноль, отрицательное число.");
+
+  return {
+    text:
+      "Готового ответа по этой задаче у меня нет, но вот с чего стоит начать:\n\n" +
+      checklist.map((item) => `• ${item}`).join("\n"),
+    source: "offline",
+  };
+};
+
 const parseMentorMessages = (value: unknown): MentorChatMessage[] | null => {
   if (!Array.isArray(value)) return null;
 
@@ -473,6 +559,41 @@ export async function createServerApp() {
       socket.to(roomId).emit("remote_update", { code, cursor, userId: socket.id });
     });
 
+    /**
+     * Chat inside a collaborative sandbox session.
+     *
+     * The client had an input and a send button for this, but no event ever
+     * existed on the server, so typing a message did nothing at all.
+     *
+     * The sender's display name is taken from the verified handshake identity,
+     * never from the payload, so a participant cannot post under someone
+     * else's name. Messages are relayed, not stored.
+     */
+    socket.on("sandbox_chat", (payload: unknown) => {
+      if (!isRecord(payload)) return;
+      const roomId = readString(payload.roomId, 100);
+      const text = readString(payload.text, 500);
+      if (!roomId || !text || text.length === 0) return;
+
+      const room = rooms.get(roomId);
+      if (!room || room.type !== "sandbox" || !room.players.includes(socket.id)) return;
+
+      // Per-socket throttle: the HTTP rate limiter does not cover websockets.
+      const now = Date.now();
+      const lastAt = typeof socket.data.lastChatAt === "number" ? socket.data.lastChatAt : 0;
+      if (now - lastAt < 500) return;
+      socket.data.lastChatAt = now;
+
+      room.lastActivity = now;
+      const identity = socket.data.identity as FirebaseIdentity | undefined;
+      io.to(roomId).emit("sandbox_message", {
+        userId: socket.id,
+        author: identity?.email?.split("@")[0]?.slice(0, 40) || "Участник",
+        text,
+        at: now,
+      });
+    });
+
     socket.on("duel_action", (payload: unknown) => {
       if (!isRecord(payload)) return;
       const roomId = readString(payload.roomId, 100);
@@ -508,8 +629,25 @@ export async function createServerApp() {
   });
 
   
+  /**
+   * Readiness, not just liveness.
+   *
+   * Roughly thirty endpoints answer 503 when the Firebase Admin credential is
+   * absent, which from the browser looks like "random buttons do nothing".
+   * This reports which capabilities are actually wired so the interface can
+   * say so once, plainly, instead of failing one action at a time.
+   */
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    const capabilities = {
+      // Server-authoritative economy: XP, coins, inventory, guilds, trades.
+      rewards: firebaseAdminDb !== null,
+      // Gemini-backed mentor. Its absence is not an outage — the mentor falls
+      // back to the local knowledge base.
+      mentorAi: model !== null,
+      realtime: true,
+    };
+    const degraded = Object.values(capabilities).some((available) => !available);
+    res.json({ status: degraded ? "degraded" : "ok", capabilities });
   });
 
   app.post("/api/lessons/complete", requireAuth, rateLimit("lesson-complete", 30, 60_000), async (req, res) => {
@@ -2229,6 +2367,26 @@ export async function createServerApp() {
     }
   });
 
+  /**
+   * Knowledge-base answers, no account required.
+   *
+   * Asking "what is a list" costs nothing: no model call, no database write,
+   * no user data. Gating that behind a login was friction with no benefit,
+   * especially on a platform whose landing page promises you can try it
+   * without registering.
+   *
+   * The paid Gemini path stays behind `requireAuth` below. This route can
+   * never reach it.
+   */
+  app.post("/api/mentor/ask", rateLimit("mentor-ask", 30, 60_000), (req, res) => {
+    const question = readString(req.body?.question, 1000);
+    if (!question || question.length === 0) {
+      res.status(400).json({ error: "question is required" });
+      return;
+    }
+    res.json(offlineChat(question));
+  });
+
   app.post("/api/mentor/hint", requireAuth, rateLimit("mentor-hint", 12, 60_000), async (req, res) => {
     try {
       const code = readString(req.body?.code, 20000);
@@ -2238,8 +2396,10 @@ export async function createServerApp() {
         res.status(400).json({ error: "code and challenge must be valid strings" });
         return;
       }
+      // No Gemini key configured: answer from the local knowledge base instead
+      // of refusing. `source` tells the client who actually answered.
       if (!model) {
-        res.status(503).json({ error: "AI mentor is not configured" });
+        res.json(offlineHint(challenge, code, error));
         return;
       }
       const prompt = `
@@ -2259,10 +2419,15 @@ export async function createServerApp() {
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      res.json({ text: response.text() });
+      res.json({ text: response.text(), source: "ai" });
     } catch (err) {
-      console.error("Gemini Proxy Error:", err);
-      res.status(500).json({ error: "Failed to generate hint" });
+      // Gemini is down or over quota. Degrade to the local answer rather than
+      // handing the learner a dead panel.
+      console.error("Mentor hint via Gemini failed:", err instanceof Error ? err.message : "unknown");
+      const code = readString(req.body?.code, 20000) || "";
+      const challenge = readString(req.body?.challenge, 2000) || "";
+      const error = typeof req.body?.error === "string" ? req.body.error.slice(0, 2000) : "";
+      res.json(offlineHint(challenge, code, error));
     }
   });
 
@@ -2274,7 +2439,7 @@ export async function createServerApp() {
         return;
       }
       if (!model) {
-        res.status(503).json({ error: "AI mentor is not configured" });
+        res.json(offlineChat(messages[messages.length - 1].content));
         return;
       }
 
@@ -2299,10 +2464,12 @@ ${history}
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         systemInstruction: "Ты — мудрый и веселый наставник-программист. Используй Markdown для форматирования кода.",
       });
-      res.json({ text: result.response.text() });
+      res.json({ text: result.response.text(), source: "ai" });
     } catch (err) {
-      console.error("Gemini Chat Proxy Error:", err);
-      res.status(500).json({ error: "Failed to generate chat response" });
+      console.error("Mentor chat via Gemini failed:", err instanceof Error ? err.message : "unknown");
+      const messages = parseMentorMessages(req.body?.messages);
+      const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1].content : "";
+      res.json(offlineChat(lastMessage));
     }
   });
 
