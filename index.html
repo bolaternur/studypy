@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#04070a" />
+
+    <title>StudyPy — Python с нуля, прямо в браузере</title>
+    <meta
+      name="description"
+      content="73 урока, 365 задач с автоматической проверкой и настоящий Python в браузере. Ничего не нужно устанавливать."
+    />
+    <meta
+      name="keywords"
+      content="Python, изучение Python, StudyPy, интерактивные уроки, задачи с проверкой, песочница Python, Pyodide"
+    />
+
+    <!-- Emerald terminal mark, inlined so the page does not 404 on /favicon.ico -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334d399'/%3E%3Cpath d='M9 11l5 5-5 5M17 21h6' stroke='%2304070a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E"
+    />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="StudyPy" />
+    <meta property="og:title" content="StudyPy — Python с нуля, прямо в браузере" />
+    <meta
+      property="og:description"
+      content="73 урока, 365 задач с автоматической проверкой и настоящий Python в браузере."
+    />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="StudyPy — Python с нуля, прямо в браузере" />
+    <meta
+      name="twitter:description"
+      content="73 урока, 365 задач с автоматической проверкой и настоящий Python в браузере."
+    />
+
+    <!--
+      The Pyodide runtime is NOT loaded here.
+
+      It used to sit in <head> as a render-blocking script, so every visitor
+      downloaded the Python runtime loader before the landing page could paint —
+      including the majority who never open the editor. `CodeEditor` injects it
+      on demand, once, with proper load and error handling.
+    -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <script>
+      // Some third-party runtimes try to replace window.fetch, which throws in
+      // browsers where the property is a getter. Make the assignment a no-op
+      // instead of letting it break the page.
+      try {
+        const originalFetch = window.fetch;
+        Object.defineProperty(window, 'fetch', {
+          configurable: true,
+          enumerable: true,
+          get: () => originalFetch,
+          set: (value) => {
+            console.warn('Blocked an attempt to overwrite window.fetch:', value);
+          },
+        });
+      } catch (error) {
+        console.error('Could not guard window.fetch:', error);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      StudyPy — интерактивная платформа для изучения Python. Для работы
+      редактора кода и уроков необходим включённый JavaScript.
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
