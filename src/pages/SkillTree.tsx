@@ -20,16 +20,16 @@ export const SkillTree = React.memo(() => {
   );
 
   const branches = [
-    { id: 'all', label: 'Все Навыки', icon: Brain },
+    { id: 'all', label: 'Все перки', icon: Brain },
     { id: 'logic', label: 'Логика', icon: Zap },
     { id: 'speed', label: 'Скорость', icon: Target },
-    { id: 'power', label: 'Мощь', icon: Flame },
+    { id: 'power', label: 'Сила', icon: Flame },
     { id: 'intellect', label: 'Интеллект', icon: Star },
     { id: 'stamina', label: 'Выносливость', icon: Shield },
   ];
 
-  const filteredPerks = React.useMemo(() => 
-    PERKS.filter(perk => 
+  const filteredPerks = React.useMemo(() =>
+    PERKS.filter(perk =>
       activeBranch === 'all' || perk.requirements.some(req => req.stat === activeBranch)
     ), [activeBranch]
   );
@@ -37,17 +37,17 @@ export const SkillTree = React.memo(() => {
   const handlePurchase = React.useCallback(async (perk: Perk) => {
     if (!userProfile) return;
     if (userPerks.includes(perk.id)) return;
-    
-    
+
+
     if (skillPoints < perk.cost) {
       toast.error('Недостаточно очков навыков!');
       return;
     }
 
-    
+
     const missingReq = perk.requirements.find(req => getStatValue(req.stat) < req.min);
     if (missingReq) {
-      toast.error(`Требуется ${missingReq.stat.toUpperCase()} уровня ${missingReq.min}!`);
+      toast.error(`Недостаточный уровень игровой характеристики: ${missingReq.min}`);
       return;
     }
 
@@ -66,7 +66,7 @@ export const SkillTree = React.memo(() => {
 
   return (
     <div className="min-h-screen bg-transparent text-white">
-      
+
       <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
           <div className="max-w-2xl">
@@ -76,23 +76,23 @@ export const SkillTree = React.memo(() => {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/10 border border-brand-primary/20 text-brand-primary mb-6"
             >
               <Brain className="w-4 h-4" />
-              <span className="text-[11px] font-black uppercase tracking-[0.2em]">Дерево навыков</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.2em]">Игровые перки</span>
             </motion.div>
             <h1 className="text-6xl font-display font-black mb-6 tracking-tighter">
-              Перки и <span className="text-brand-primary italic serif">Способности</span>
+              Перки и <span className="text-brand-primary italic serif">способности</span>
             </h1>
             <p className="text-white/40 text-xl font-medium">
-              Трать свои очки навыков, чтобы открыть пассивные бонусы и новые возможности.
+              Сохранённые игровые характеристики и перки. Они не оценивают знание Python; бонусы за учебный прогресс отключены.
             </p>
           </div>
-          
+
           <div className="flex items-center gap-6 p-6 glass rounded-3xl border border-brand-primary/20 shadow-xl shadow-brand-primary/10">
             <div className="w-12 h-12 rounded-2xl bg-brand-primary/20 flex items-center justify-center">
               <Star className="w-6 h-6 text-brand-primary fill-brand-primary" />
             </div>
             <div>
               <div className="text-[11px] font-black uppercase tracking-widest text-white/55 mb-1">Доступные очки</div>
-              <div className="text-3xl font-black text-brand-primary font-mono">{skillPoints} SP</div>
+              <div className="text-3xl font-black text-brand-primary font-mono">Очки: {skillPoints}</div>
             </div>
           </div>
         </header>
@@ -103,8 +103,8 @@ export const SkillTree = React.memo(() => {
               key={branch.id}
               onClick={() => setActiveBranch(branch.id)}
               className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${
-                activeBranch === branch.id 
-                  ? 'bg-brand-primary text-black shadow-[0_0_20px_rgba(45,212,191,0.4)] scale-105' 
+                activeBranch === branch.id
+                  ? 'bg-brand-primary text-black shadow-[0_0_20px_rgba(45,212,191,0.4)] scale-105'
                   : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
               }`}
             >
@@ -134,8 +134,8 @@ export const SkillTree = React.memo(() => {
                   className={`group relative p-6 rounded-[24px] border transition-all duration-300 cursor-pointer overflow-hidden ${
                     selectedPerk?.id === perk.id ? 'ring-2 ring-brand-primary border-brand-primary shadow-[0_0_30px_rgba(45,212,191,0.2)] ' : ''
                   }${
-                    isUnlocked 
-                      ? 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/60' 
+                    isUnlocked
+                      ? 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/60'
                       : isLocked
                         ? 'bg-black/40 border-white/5 grayscale opacity-50 hover:opacity-80'
                         : 'bg-white/5 border-white/10 hover:border-brand-primary/50 hover:bg-white/10'
@@ -151,7 +151,7 @@ export const SkillTree = React.memo(() => {
                       <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     ) : (
                       <div className="px-3 py-1 rounded-lg bg-black/50 border border-white/10 text-[11px] font-black text-brand-primary uppercase tracking-widest">
-                        {perk.cost} SP
+                        Очки: {perk.cost}
                       </div>
                     )}
                   </div>
@@ -167,10 +167,10 @@ export const SkillTree = React.memo(() => {
                     {perk.requirements.map(req => (
                       <span key={req.stat} className={`px-2 py-1 rounded-md text-[11px] font-black uppercase tracking-widest border ${
                         getStatValue(req.stat) >= req.min
-                          ? 'border-emerald-500/20 text-emerald-500 bg-emerald-500/5' 
+                          ? 'border-emerald-500/20 text-emerald-500 bg-emerald-500/5'
                           : 'border-red-500/20 text-red-500 bg-red-500/5'
                       }`}>
-                        {req.stat}: {req.min}
+                        {branches.find(branch => branch.id === req.stat)?.label ?? 'Характеристика'}: {req.min}
                       </span>
                     ))}
                   </div>
@@ -201,7 +201,7 @@ export const SkillTree = React.memo(() => {
                     </div>
                     <div>
                       <h2 className="text-2xl 2xl:text-3xl font-black mb-1 tracking-tight leading-none">{selectedPerk.name}</h2>
-                      <p className="text-brand-primary/60 font-black uppercase text-[11px] tracking-widest">Пассивная способность</p>
+                      <p className="text-brand-primary/60 font-black uppercase text-[11px] tracking-widest">Игровой перк</p>
                     </div>
                   </div>
 
@@ -212,16 +212,16 @@ export const SkillTree = React.memo(() => {
                   <div className="space-y-4 mb-10">
                     <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
                       <span className="text-[11px] font-black text-white/40 uppercase tracking-widest">Стоимость</span>
-                      <span className="text-xl font-black text-brand-primary font-mono">{selectedPerk.cost} SP</span>
+                      <span className="text-xl font-black text-brand-primary font-mono">Очки: {selectedPerk.cost}</span>
                     </div>
                     <div className="p-6 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 relative overflow-hidden">
                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/20 blur-2xl rounded-full" />
-                       <span className="text-[11px] font-black uppercase tracking-widest text-emerald-500 block mb-2">ЭФФЕКТ ПЕРКА</span>
+                       <span className="text-[11px] font-black uppercase tracking-widest text-emerald-500 block mb-2">Сохранённые параметры</span>
                        <div className="text-xl 2xl:text-2xl font-black text-emerald-400 relative z-10">
-                          {selectedPerk.bonus.type === 'coins' && `+${Math.round(selectedPerk.bonus.value * 100)}% Монет`}
-                          {selectedPerk.bonus.type === 'xp' && `+${Math.round(selectedPerk.bonus.value * 100)}% XP`}
-                          {selectedPerk.bonus.type === 'damage' && `+${Math.round(selectedPerk.bonus.value * 100)}% Урона`}
-                          {selectedPerk.bonus.type === 'luck' && selectedPerk.bonus.value === 1.0 ? 'ВТОРОЙ ШАНС' : selectedPerk.bonus.type === 'luck' ? `+${Math.round(selectedPerk.bonus.value * 100)}% Удачи` : ''}
+                          {selectedPerk.bonus.type === 'coins' && `+${Math.round(selectedPerk.bonus.value * 100)}% монет`}
+                          {selectedPerk.bonus.type === 'xp' && `+${Math.round(selectedPerk.bonus.value * 100)}% игрового опыта`}
+                          {selectedPerk.bonus.type === 'damage' && `+${Math.round(selectedPerk.bonus.value * 100)}% урона`}
+                          {selectedPerk.bonus.type === 'luck' && selectedPerk.bonus.value === 1.0 ? 'Второй шанс' : selectedPerk.bonus.type === 'luck' ? `+${Math.round(selectedPerk.bonus.value * 100)}% удачи` : ''}
                        </div>
                     </div>
                   </div>
@@ -232,11 +232,11 @@ export const SkillTree = React.memo(() => {
                       disabled={isPurchasing || skillPoints < selectedPerk.cost || !selectedPerk.requirements.every(req => getStatValue(req.stat) >= req.min)}
                       className="w-full py-4 2xl:py-5 bg-gradient-to-r from-brand-primary to-brand-secondary text-white font-black rounded-2xl 2xl:rounded-3xl uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-30 disabled:hover:scale-100 shadow-xl shadow-brand-primary/20 text-xs 2xl:text-sm"
                     >
-                      {isPurchasing ? 'ПОКУПКА...' : 'РАЗБЛОКИРОВАТЬ'}
+                      {isPurchasing ? 'Покупка…' : 'Разблокировать'}
                     </button>
                   ) : (
                     <div className="w-full py-4 2xl:py-5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-black rounded-2xl 2xl:rounded-3xl uppercase tracking-widest text-center flex items-center justify-center gap-2 text-xs 2xl:text-sm">
-                      <CheckCircle2 className="w-5 h-5" /> ИЗУЧЕНО
+                      <CheckCircle2 className="w-5 h-5" /> Открыто
                     </div>
                   )}
                 </motion.div>
@@ -245,8 +245,8 @@ export const SkillTree = React.memo(() => {
                   <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mb-6">
                     <Brain className="w-10 h-10 text-brand-primary" />
                   </div>
-                  <h3 className="text-xl font-black mb-2">Детали Навыка</h3>
-                  <p className="text-xs font-bold text-white/40 uppercase tracking-widest max-w-[200px] mx-auto leading-relaxed">Выберите перк из дерева слева, чтобы узнать его характеристики</p>
+                  <h3 className="text-xl font-black mb-2">Описание перка</h3>
+                  <p className="text-xs font-bold text-white/40 uppercase tracking-widest max-w-[200px] mx-auto leading-relaxed">Выбери перк, чтобы посмотреть его параметры</p>
                 </div>
               )}
             </AnimatePresence>

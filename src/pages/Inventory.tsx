@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Backpack, Shield, Zap, Swords, Brain, Heart, Star, ShoppingBag, Trash2, Coins, ArrowRight, User, ArrowRightLeft, Search, Check, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { ALL_ITEMS } from './Shop';
+import { ALL_ITEMS } from '../constants/items';
 import { playSound } from '../utils/sounds';
 import { toast } from 'sonner';
 import { TextReveal } from '../components/TextReveal';
@@ -26,7 +26,7 @@ const InventoryItemCard = React.memo(({ item, index, onSelect }: { item: any, in
         {item.icon}
       </div>
       <span className="text-[11px] font-bold text-white/60 text-center line-clamp-1">{item.name}</span>
-      
+
       {item.rarity === 'legendary' && (
         <div className="absolute top-2 right-2">
           <Star className="w-3 h-3 text-amber-500 fill-amber-500 animate-pulse" />
@@ -43,8 +43,8 @@ export const Inventory = () => {
   const [showMarketplaceModal, setShowMarketplaceModal] = useState(false);
   const [marketPrice, setMarketPrice] = useState(100);
   const [activeTab, setActiveTab] = useState<'items' | 'trades' | 'quests'>('items');
-  
-  
+
+
   const [showTradeModal, setShowTradeModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -126,21 +126,21 @@ export const Inventory = () => {
     setSelectedItem(item);
   }, []);
 
-  if (!userProfile) return null;
+  if (!userProfile) return <div className="page-container program-page"><h1>Инвентарь</h1><p className="muted mt-4">Игровые предметы сохраняются в аккаунте. Войди, чтобы открыть свою коллекцию.</p><button className="primary-button mt-5" onClick={()=>window.dispatchEvent(new Event("open-auth-modal"))}>Войти в аккаунт</button></div>;
 
   return (
     <div className="min-h-screen pt-32 pb-20 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-4 space-y-8"
           >
             <div className="glass rounded-3xl p-8 border border-white/10 relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              
+
               <div className="relative z-10 text-center space-y-6">
                 <div className="relative inline-block">
                   <div className="w-48 h-48 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-full p-1 shadow-[0_0_50px_rgba(45,212,191,0.3)]">
@@ -159,7 +159,7 @@ export const Inventory = () => {
 
                 <div>
                   <h1 className="text-3xl font-black text-white tracking-tighter">{userProfile.username}</h1>
-                  <p className="text-brand-primary font-bold uppercase tracking-widest text-xs mt-1">Python Developer</p>
+                  <p className="text-brand-primary font-bold uppercase tracking-widest text-xs mt-1">Игровой профиль</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
@@ -180,7 +180,7 @@ export const Inventory = () => {
           </motion.div>
 
           {}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-8 space-y-8"
@@ -195,7 +195,7 @@ export const Inventory = () => {
                     <TextReveal text="Инвентарь" delay={0.1} />
                   </h2>
                 </div>
-                
+
                 <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
                   <button
                     onClick={() => setActiveTab('items')}
@@ -216,7 +216,7 @@ export const Inventory = () => {
                     onClick={() => setActiveTab('quests')}
                     className={`px-6 py-2 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${activeTab === 'quests' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
                   >
-                    Квесты
+                    Архив квестов
                   </button>
                 </div>
               </div>
@@ -243,7 +243,7 @@ export const Inventory = () => {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-white">Пусто...</h3>
-                        <p className="text-white/40">У вас пока нет предметов. Загляните в магазин!</p>
+                        <p className="text-white/40">В инвентаре пока нет предметов.</p>
                       </div>
                     </div>
                   ) : (
@@ -263,7 +263,7 @@ export const Inventory = () => {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold text-white">Входящие предложения</h3>
-                    <button 
+                    <button
                       onClick={loadTrades}
                       className="text-xs text-brand-primary font-bold hover:underline"
                     >
@@ -297,7 +297,7 @@ export const Inventory = () => {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <p className="text-[11px] font-bold text-white/40 uppercase">Вы получите:</p>
+                              <p className="text-[11px] font-bold text-white/40 uppercase">Ты получишь:</p>
                               <div className="flex flex-wrap gap-2">
                                 {trade.senderItems.map((id: string, i: number) => (
                                   <div key={i} className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center border border-white/10" title={id}>
@@ -307,7 +307,7 @@ export const Inventory = () => {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <p className="text-[11px] font-bold text-white/40 uppercase">Вы отдадите:</p>
+                              <p className="text-[11px] font-bold text-white/40 uppercase">Ты отдашь:</p>
                               <div className="flex flex-wrap gap-2">
                                 {trade.receiverItems.map((id: string, i: number) => (
                                   <div key={i} className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center border border-white/10" title={id}>
@@ -340,9 +340,9 @@ export const Inventory = () => {
               ) : (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-white uppercase tracking-tighter">Ежедневные Квесты</h3>
+                    <h3 className="text-xl font-bold text-white uppercase tracking-tighter">Архив игровых квестов</h3>
                     <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-[11px] text-white/40 font-mono uppercase tracking-widest">
-                      Обновление через: {Math.max(0, 24 - Math.floor((new Date().getTime() - (userProfile.lastQuestUpdate?.toDate().getTime() || 0)) / (1000 * 60 * 60)))}ч
+                      Сохранённые записи. Новые квесты и награды отключены.
                     </div>
                   </div>
 
@@ -356,7 +356,7 @@ export const Inventory = () => {
                               {quest.completed && <div className="px-2 py-0.5 bg-emerald-500 text-black text-[11px] font-black uppercase rounded-full">Выполнено</div>}
                             </div>
                             <p className="text-sm text-white/60">{quest.description}</p>
-                            
+
                             <div className="flex items-center gap-4 pt-2">
                               <div className="flex items-center gap-1.5">
                                 <Coins className="w-3 h-3 text-amber-500" />
@@ -375,7 +375,7 @@ export const Inventory = () => {
                               <span>{quest.current} / {quest.target}</span>
                             </div>
                             <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                              <motion.div 
+                              <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${(quest.current / quest.target) * 100}%` }}
                                 className={`h-full rounded-full ${quest.completed ? 'bg-emerald-500' : 'bg-brand-primary'}`}
@@ -396,13 +396,13 @@ export const Inventory = () => {
       {}
       <AnimatePresence>
         {showTradeModal && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-2xl p-4 overflow-y-auto"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
@@ -419,7 +419,7 @@ export const Inventory = () => {
                 <div className="space-y-6">
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
-                    <input aria-label="Поиск игрока по имени..." 
+                    <input aria-label="Поиск игрока по имени..."
                       type="text"
                       placeholder="Поиск игрока по имени..."
                       value={searchQuery}
@@ -428,7 +428,7 @@ export const Inventory = () => {
                       className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-white focus:border-brand-primary outline-none transition-all"
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                     {searchResults.map((user) => (
                       <button
@@ -462,7 +462,7 @@ export const Inventory = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {}
                     <div className="space-y-4">
-                      <h4 className="text-sm font-bold text-white/40 uppercase tracking-widest">Ваши предметы ({myTradeItems.length})</h4>
+                      <h4 className="text-sm font-bold text-white/40 uppercase tracking-widest">Твои предметы ({myTradeItems.length})</h4>
                       <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                         {inventoryItems.map((item, i) => (
                           <button
@@ -489,7 +489,7 @@ export const Inventory = () => {
                     {}
                     <div className="space-y-4">
                       <h4 className="text-sm font-bold text-white/40 uppercase tracking-widest">Предметы игрока</h4>
-                      <p className="text-[11px] text-white/50 italic">Примечание: Вы запрашиваете эти предметы у игрока.</p>
+                      <p className="text-[11px] text-white/50 italic">Выбери предметы, которые хочешь получить от игрока.</p>
                       <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                         {ALL_ITEMS.slice(0, 12).map((item, i) => (
                           <button
@@ -533,13 +533,13 @@ export const Inventory = () => {
       {}
       <AnimatePresence>
         {selectedItem && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
@@ -580,10 +580,10 @@ export const Inventory = () => {
                 </div>
 
                 <div className="w-full grid grid-cols-1 gap-4">
-                  {(selectedItem.id.includes('booster') || 
-                    selectedItem.id.includes('serum') || 
-                    selectedItem.id.includes('gloves') || 
-                    selectedItem.id.includes('chip') || 
+                  {(selectedItem.id.includes('booster') ||
+                    selectedItem.id.includes('serum') ||
+                    selectedItem.id.includes('gloves') ||
+                    selectedItem.id.includes('chip') ||
                     selectedItem.id.includes('drink') ||
                     selectedItem.id.includes('apple') ||
                     selectedItem.id.includes('coffee') ||
@@ -646,13 +646,13 @@ export const Inventory = () => {
       {}
       <AnimatePresence>
         {showSellConfirm && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-2xl p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
@@ -662,8 +662,8 @@ export const Inventory = () => {
                 <Trash2 className="w-10 h-10 text-red-500" />
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white tracking-tighter">Вы уверены?</h3>
-                <p className="text-white/60 mt-2">Вы получите <span className="text-amber-500 font-bold">100 монет</span> за этот предмет.</p>
+                <h3 className="text-2xl font-black text-white tracking-tighter">Продать предмет?</h3>
+                <p className="text-white/60 mt-2">Ты получишь <span className="text-amber-500 font-bold">100 монет</span> за этот предмет.</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <button
@@ -687,13 +687,13 @@ export const Inventory = () => {
       {}
       <AnimatePresence>
         {showMarketplaceModal && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-2xl p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
@@ -704,11 +704,11 @@ export const Inventory = () => {
               </div>
               <div>
                 <h3 className="text-2xl font-black text-white tracking-tighter">Выставить на рынок</h3>
-                <p className="text-white/60 mt-2">Укажите цену продажи</p>
+                <p className="text-white/60 mt-2">Укажи цену продажи</p>
               </div>
-              
+
               <div className="relative">
-                <input aria-label="Цена" 
+                <input aria-label="Цена"
                   type="number"
                   value={marketPrice}
                   onChange={(e) => setMarketPrice(Number(e.target.value))}

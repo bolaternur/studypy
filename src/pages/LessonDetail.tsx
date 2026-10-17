@@ -1,188 +1,23 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { LESSONS } from '../constants/lessons';
-import { PythonGame } from '../components/PythonGame';
-import { ArrowRight, Check, ChevronLeft, Lightbulb } from 'lucide-react';
-import { PythonGenesis } from './lessons/PythonGenesis';
-import { DataVessels } from './lessons/DataVessels';
-import { TheCollection } from './lessons/TheCollection';
-import { TemporalLoops } from './lessons/TemporalLoops';
-import { CodeAlchemy } from './lessons/CodeAlchemy';
-import { readJson, writeJson, isStringArray, STORAGE_KEYS } from '../utils/storage';
+import { useEffect, useState } from 'react';
+import { Link, Navigate, useParams } from 'react-router-dom';
+import { loadLesson, type Lesson } from '../constants/lessons';
+import { LESSON_CATALOG, resolveLessonId } from '../constants/lesson-catalog';
 import { RichLessonDetail } from './lessons/RichLessonDetail';
-
-import { useAuth } from '../contexts/AuthContext';
-import { playSound } from '../utils/sounds';
-import { MagneticButton } from '../components/MagneticButton';
-
-export const LessonDetail = () => {
-  const { updateQuestProgress } = useAuth();
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const lesson = LESSONS.find(l => l.id === id);
-  const [isCompleted, setIsCompleted] = useState(false);
-
-  if (!lesson) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Урок не найден</h1>
-          <Link to="/pathways" className="text-brand-primary hover:underline">Вернуться к путям</Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (lesson.id === 'intro') {
-    return <PythonGenesis />;
-  }
-  
-  if (lesson.id === 'variables') {
-    return <DataVessels />;
-  }
-
-  if (lesson.id === 'lists') {
-    return <TheCollection />;
-  }
-
-  if (lesson.id === 'loops') {
-    return <TemporalLoops />;
-  }
-
-  if (lesson.id === 'functions') {
-    return <CodeAlchemy />;
-  }
-
-  if (lesson.sections) {
-    return <RichLessonDetail lesson={lesson} />;
-  }
-
-  const handleComplete = () => {
-    setIsCompleted(true);
-    updateQuestProgress('lesson');
-    playSound('levelUp');
-    const completed = readJson(STORAGE_KEYS.lessonProgress, isStringArray, []);
-    if (!completed.includes(lesson.id)) {
-      writeJson(STORAGE_KEYS.lessonProgress, [...completed, lesson.id]);
-    }
-  };
-
-  const nextLesson = LESSONS[LESSONS.indexOf(lesson) + 1];
-
-  return (
-    <div className="min-h-screen pt-32 pb-20 px-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-12">
-          <Link to="/pathways" className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors mb-8">
-            <ChevronLeft className="w-4 h-4" />
-            Назад к путям
-          </Link>
-          
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 rounded-full bg-brand-primary/20 text-brand-primary text-[11px] font-bold uppercase tracking-widest">
-                  {lesson.level}
-                </span>
-                <span className="text-white/50">•</span>
-                <span className="text-white/40 text-sm">Урок {LESSONS.indexOf(lesson) + 1} из {LESSONS.length}</span>
-              </div>
-              <h1 className="text-3xl md:text-4xl font-display font-bold">{lesson.title}</h1>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-12">
-          <div className="lg:col-span-2 space-y-12">
-            <div className="glass rounded-3xl p-8 md:p-12">
-              <p className="text-xl text-white/70 leading-relaxed mb-8">
-                {lesson.content}
-              </p>
-              
-              <PythonGame lesson={lesson} onComplete={handleComplete} />
-            </div>
-
-            <AnimatePresence>
-              {isCompleted && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="glass rounded-3xl p-8 border-emerald-500/30 bg-emerald-500/5 flex flex-col md:flex-row items-center justify-between gap-6"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white">
-                      <Check className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Урок освоен!</h3>
-                      <p className="text-white/50">Вы успешно завершили {lesson.title}.</p>
-                    </div>
-                  </div>
-                  
-                  {nextLesson ? (
-                    <MagneticButton
-                      onClick={() => {
-                        setIsCompleted(false);
-                        navigate(`/lesson/${nextLesson.id}`);
-                      }}
-                      className="px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-white/90 transition-all flex items-center gap-2"
-                    >
-                      Следующий урок
-                      <ArrowRight className="w-4 h-4" />
-                    </MagneticButton>
-                  ) : (
-                    <Link to="/pathways">
-                      <MagneticButton
-                        className="px-8 py-3 bg-brand-primary text-white rounded-full font-bold hover:bg-brand-primary/90 transition-all"
-                      >
-                        Вернуться к путям
-                      </MagneticButton>
-                    </Link>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="space-y-6">
-            <div className="glass rounded-3xl p-8 space-y-6">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <Lightbulb className="w-5 h-5 text-amber-400" />
-                Основные выводы
-              </h3>
-              <ul className="space-y-4 text-sm text-white/60">
-                <li className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-brand-primary mt-1.5 shrink-0" />
-                  Поймите основной синтаксис и назначение {lesson.title}.
-                </li>
-                <li className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-brand-primary mt-1.5 shrink-0" />
-                  Узнайте, как применять эти концепции в реальных сценариях.
-                </li>
-                <li className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-brand-primary mt-1.5 shrink-0" />
-                  Практикуйтесь в интерактивном терминале для закрепления навыков.
-                </li>
-              </ul>
-            </div>
-
-            <div className="glass rounded-3xl p-8 bg-brand-primary/5 border-brand-primary/20">
-              <h3 className="text-lg font-bold mb-4">Нужна помощь?</h3>
-              <p className="text-sm text-white/50 mb-6">
-                Застряли? Спросите ментора — он объяснит тему урока и разберёт текст ошибки.
-              </p>
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('open-mentor'))}
-                className="w-full py-3 glass rounded-xl text-sm font-bold hover:bg-white/10 transition-all"
-              >
-                Открыть ментора
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+export function LessonDetail() {
+  const { id = '' } = useParams();
+  const resolved = resolveLessonId(id);
+  const canonical = LESSON_CATALOG.some(lesson => lesson.id === resolved) ? resolved : undefined;
+  const [lesson,setLesson] = useState<Lesson>();
+  const [error,setError] = useState(false);
+  const [retry,setRetry] = useState(0);
+  useEffect(()=>{
+    let active=true;setLesson(undefined);setError(false);
+    if(canonical) void loadLesson(canonical).then(value=>{if(active)setLesson(value);}).catch(()=>{if(active)setError(true);});
+    return ()=>{active=false;};
+  },[canonical,retry]);
+  if(canonical&&canonical!==id)return <Navigate to={'/lesson/'+canonical} replace/>;
+  if(!canonical)return <div className="page-container program-page"><h1>Урок не найден</h1><Link className="text-link" to="/pathways">Открыть программу обучения</Link></div>;
+  if(error)return <div className="page-container program-page" role="alert"><p>Не удалось загрузить урок. Твой черновик сохранён в браузере.</p><button className="secondary-button mt-4" onClick={()=>setRetry(v=>v+1)}>Попробовать ещё раз</button></div>;
+  if(!lesson)return <p className="page-container program-page" role="status">Загрузка урока…</p>;
+  return <RichLessonDetail key={lesson.id} lesson={lesson}/>;
+}

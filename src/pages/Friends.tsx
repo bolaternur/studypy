@@ -18,7 +18,8 @@ export const Friends = () => {
 
   useEffect(() => {
     const unsub = SocialService.subscribeToIncomingRequests(setRequests);
-    return () => unsub();
+
+  return () => unsub();
   }, []);
 
   const fetchFriends = async () => {
@@ -85,7 +86,7 @@ export const Friends = () => {
   };
 
   const handleRemoveFriend = async (friendId: string) => {
-    if (confirm('Вы уверены, что хотите удалить пользователя из друзей?')) {
+    if (confirm('Удалить пользователя из друзей?')) {
       try {
         await SocialService.removeFriend(friendId);
       } catch (error) {
@@ -94,10 +95,11 @@ export const Friends = () => {
     }
   };
 
+  if (!userProfile) return <div className="page-container program-page"><h1>Друзья</h1><p className="muted mt-4">Войди, чтобы найти напарника, добавить друзей и отправить сообщение.</p><button className="primary-button mt-5" onClick={()=>window.dispatchEvent(new Event("open-auth-modal"))}>Войти в аккаунт</button></div>;
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 bg-[#04070a] text-white">
       <div className="max-w-7xl mx-auto space-y-12">
-        
+
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
           <div className="max-w-2xl">
             <motion.div
@@ -106,19 +108,19 @@ export const Friends = () => {
               className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-brand-primary/10 border border-brand-primary/20 text-brand-primary mb-6"
             >
               <Users className="w-5 h-5" />
-              <span className="text-sm font-black uppercase tracking-[0.3em]">Социальная Сеть</span>
+              <span className="text-sm font-black uppercase tracking-[0.3em]">Сообщество</span>
             </motion.div>
             <h1 className="text-6xl font-display font-black tracking-tighter mb-4">
-              Друзья и <span className="text-brand-primary italic serif">Напарники</span>
+              Друзья и <span className="text-brand-primary italic serif">напарники</span>
             </h1>
             <p className="text-white/40 text-xl font-medium">
-              Добавляйте друзей, следите за их прогрессом и обменивайтесь опытом.
+              Найди напарника для совместной практики и обсуждения задач.
             </p>
           </div>
         </header>
 
         <div className="grid lg:grid-cols-3 gap-8 items-start">
-          
+
           {}
           <div className="lg:col-span-1 space-y-8">
             <div className="glass rounded-[3rem] p-10 border border-brand-primary/20 relative overflow-hidden shadow-2xl shadow-brand-primary/5">
@@ -127,29 +129,29 @@ export const Friends = () => {
                  <Search className="w-5 h-5 text-brand-primary" /> Найти напарника
                </h3>
                <form onSubmit={handleSearch} className="relative z-10 space-y-4">
-                 <input aria-label="Поиск по нику" 
-                   type="text" 
+                 <input aria-label="Поиск по нику"
+                   type="text"
                    value={searchUsername}
                    onChange={e => {
                      setSearchUsername(e.target.value);
                      if (!e.target.value.trim()) setSearchResults([]);
                    }}
-                   placeholder="Введите никнейм..." 
+                   placeholder="Введи имя пользователя…"
                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-brand-primary transition-colors font-bold text-lg"
                  />
-                 <button 
-                   type="submit" 
+                 <button
+                   type="submit"
                    disabled={isSearching || !searchUsername.trim()}
                    className="w-full py-5 rounded-2xl bg-brand-primary text-black font-black text-xs uppercase tracking-[0.2em] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100 shadow-xl shadow-brand-primary/20"
                  >
-                   {isSearching ? 'ПОИСК ИГРОКОВ...' : 'НАЙТИ ДРУГА'}
+                   {isSearching ? 'Поиск…' : 'Найти друга'}
                  </button>
                </form>
 
                {}
                <AnimatePresence>
                  {searchResults.length > 0 && (
-                   <motion.div 
+                   <motion.div
                      initial={{ opacity: 0, y: -10 }}
                      animate={{ opacity: 1, y: 0 }}
                      className="mt-6 space-y-3 relative z-10"
@@ -165,7 +167,7 @@ export const Friends = () => {
                              <p className="text-[11px] text-white/40 uppercase tracking-widest">Ур. {user.level || 1}</p>
                            </div>
                          </div>
-                         <button 
+                         <button
                            onClick={() => handleAddFriend(user.uid, user.username)}
                            className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
                            title="Добавить"
@@ -178,7 +180,7 @@ export const Friends = () => {
                  )}
                  {searchUsername.trim() && searchResults.length === 0 && !isSearching && (
                    <div className="mt-6 text-center text-sm font-bold text-white/40 uppercase tracking-widest relative z-10">
-                     Увы, никого нет...
+                     Никого не найдено
                    </div>
                  )}
                </AnimatePresence>
@@ -186,7 +188,7 @@ export const Friends = () => {
 
             <AnimatePresence>
               {requests.length > 0 && (
-                <motion.div 
+                <motion.div
                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
                    animate={{ opacity: 1, scale: 1, y: 0 }}
                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -194,10 +196,10 @@ export const Friends = () => {
                 >
                   <div className="absolute top-0 right-0 p-8 opacity-5"><Users className="w-24 h-24 text-emerald-500" /></div>
                   <h3 className="text-sm font-black text-emerald-400 uppercase tracking-widest mb-6 flex items-center justify-between relative z-10">
-                    <span>Входящие Запросы</span>
+                    <span>Входящие заявки</span>
                     <span className="bg-emerald-500 text-black px-3 py-1 rounded-lg text-xs shadow-lg">{requests.length}</span>
                   </h3>
-                  
+
                   <div className="space-y-4 relative z-10">
                     {requests.map(req => (
                       <div key={req.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between group hover:border-emerald-500/30 transition-all">
@@ -226,7 +228,7 @@ export const Friends = () => {
              <div className="glass rounded-[3rem] p-10 border border-white/10 min-h-[600px] flex flex-col">
                <div className="flex items-center justify-between mb-10 pb-8 border-b border-white/5">
                  <h2 className="text-3xl font-black flex items-center gap-4">
-                   Список Друзей
+                   Список друзей
                    <span className="text-sm px-4 py-2 rounded-xl bg-white/5 text-brand-primary font-black uppercase tracking-widest border border-brand-primary/20">
                      {friends.length} Всего
                    </span>
@@ -242,8 +244,8 @@ export const Friends = () => {
                    <div className="w-24 h-24 bg-white/5 rounded-3xl flex items-center justify-center mb-6">
                      <Users className="w-12 h-12 text-white/50" />
                    </div>
-                   <p className="text-2xl font-black mb-3 text-white">У вас еще нет друзей</p>
-                   <p className="text-xs font-bold text-white/40 uppercase tracking-widest max-w-[250px] leading-relaxed">Используйте поиск слева, чтобы найти напарников для игры</p>
+                   <p className="text-2xl font-black mb-3 text-white">В списке пока нет друзей</p>
+                   <p className="text-xs font-bold text-white/40 uppercase tracking-widest max-w-[250px] leading-relaxed">Найди напарника по имени через поиск.</p>
                  </div>
                ) : (
                  <div className="grid md:grid-cols-2 gap-6 flex-1 content-start">
@@ -256,7 +258,7 @@ export const Friends = () => {
                        className="p-6 rounded-[2rem] bg-gradient-to-br from-white/5 to-transparent border border-white/10 flex items-center justify-between group hover:border-brand-primary/50 transition-all cursor-pointer relative overflow-hidden"
                      >
                        <div className="absolute inset-0 bg-brand-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                       
+
                        <div className="flex items-center gap-5 relative z-10 w-full">
                          <div className="w-16 h-16 rounded-[1.5rem] bg-brand-primary/10 border border-brand-primary/30 flex items-center justify-center text-2xl font-bold text-brand-primary shadow-inner">
                            {friend.avatar || friend.username?.[0]?.toUpperCase() || 'U'}
@@ -265,10 +267,10 @@ export const Friends = () => {
                            <div className="font-black text-xl mb-1 text-white group-hover:text-brand-primary transition-colors">{friend.username}</div>
                            <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-widest text-white/40">
                              <span className="flex items-center gap-1.5 text-emerald-400">
-                               <Star className="w-3.5 h-3.5" /> Уровень {friend.level || 1}
+                               <Star className="w-3.5 h-3.5" /> Игровой уровень {friend.level || 1}
                              </span>
                              <span className="flex items-center gap-1.5 text-amber-500">
-                               <Trophy className="w-3.5 h-3.5" /> Ранг {friend.rank || 'F'}
+                               <Trophy className="w-3.5 h-3.5" /> Игровой ранг {friend.rank || 'F'}
                              </span>
                            </div>
                          </div>
@@ -295,14 +297,14 @@ export const Friends = () => {
                )}
              </div>
           </div>
-          
+
         </div>
       </div>
 
-      <SocialPanel 
-        isOpen={chatUserId !== null} 
-        onClose={() => setChatUserId(null)} 
-        initialChatUserId={chatUserId} 
+      <SocialPanel
+        isOpen={chatUserId !== null}
+        onClose={() => setChatUserId(null)}
+        initialChatUserId={chatUserId}
       />
     </div>
   );

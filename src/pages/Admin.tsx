@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Shield, Users, Coins, Zap, Star, Swords, Brain, Heart, Package, 
+import {
+  Shield, Users, Coins, Zap, Star, Swords, Brain, Heart, Package,
   Search, History, Trash2, AlertTriangle, CheckCircle2, Terminal,
   BookOpen, Code2, Cpu, Flame, Key, Lock, Unlock, Database, Eye,
   Trophy, Hammer, Ghost, Coffee, GraduationCap, RefreshCw, Target
@@ -11,7 +11,7 @@ import { useAuth, UserProfile } from '../contexts/AuthContext';
 import { ALL_ITEMS } from './Shop';
 import { playSound } from '../utils/sounds';
 import { TextReveal } from '../components/TextReveal';
-import { LESSONS } from '../constants/lessons';
+import { LESSON_CATALOG as LESSONS } from '../constants/lesson-catalog';
 
 interface AdminLog {
   id: string;
@@ -25,13 +25,13 @@ interface AdminLog {
 type AdminTab = 'users' | 'solutions' | 'system' | 'events';
 
 export const Admin = () => {
-  const { 
-    isAdmin, adminAddCoins, adminUpdateUserStats, adminGiveItem, 
+  const {
+    isAdmin, adminAddCoins, adminUpdateUserStats, adminGiveItem,
     searchUsers, adminSetLevel, adminCompleteLesson, adminUnlockAllLessons,
     adminMaxOut, adminSpawnBoss, adminGiveCoins, adminSetStats,
     adminCompleteQuest, adminCompleteAllQuests
   } = useAuth();
-  
+
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
   const [targetUserId, setTargetUserId] = useState('');
   const [targetStat, setTargetStat] = useState('logic');
@@ -43,11 +43,11 @@ export const Admin = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  
-  
+
+
   const [solutionSearch, setSolutionSearch] = useState('');
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
-  
+
   const [systemHealth, setSystemHealth] = useState<'loading' | 'online' | 'offline'>('loading');
 
   useEffect(() => {
@@ -151,8 +151,8 @@ export const Admin = () => {
     }
   };
 
-  const filteredLessons = LESSONS.filter(l => 
-    l.title.toLowerCase().includes(solutionSearch.toLowerCase()) || 
+  const filteredLessons = LESSONS.filter(l =>
+    l.title.toLowerCase().includes(solutionSearch.toLowerCase()) ||
     l.id.toLowerCase().includes(solutionSearch.toLowerCase())
   );
 
@@ -178,15 +178,15 @@ export const Admin = () => {
               <p className="text-red-500 font-mono text-xs tracking-[0.2em] animate-pulse">SUPREME AUTHORITY GRANTED</p>
             </div>
           </div>
-          
+
           <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10">
             {(['users', 'solutions', 'system', 'events'] as AdminTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${
-                  activeTab === tab 
-                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' 
+                  activeTab === tab
+                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
                     : 'text-white/40 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -202,7 +202,7 @@ export const Admin = () => {
 
         <AnimatePresence mode="wait">
           {activeTab === 'users' && (
-            <motion.div 
+            <motion.div
               key="users"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -218,7 +218,7 @@ export const Admin = () => {
                   </h2>
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-                    <input aria-label="Username..." 
+                    <input aria-label="Username..."
                       type="text"
                       placeholder="Username..."
                       value={searchQuery}
@@ -296,7 +296,7 @@ export const Admin = () => {
                           <Zap className="w-5 h-5" /> Quick Cheats
                         </h3>
                         <div className="flex flex-wrap gap-4">
-                          <button 
+                          <button
                             onClick={async () => {
                               await adminMaxOut(selectedUser.uid);
                               toast.success("USER MAXED OUT!");
@@ -305,13 +305,13 @@ export const Admin = () => {
                           >
                             GOD MODE (MAX ALL)
                           </button>
-                          <button 
+                          <button
                             onClick={() => adminSetLevel(selectedUser.uid, (selectedUser.level || 1) + 1, 0)}
                             className="px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-2xl transition-all"
                           >
                             +1 LEVEL
                           </button>
-                          <button 
+                          <button
                             onClick={() => adminGiveCoins(selectedUser.uid, 1000000)}
                             className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-2xl transition-all"
                           >
@@ -322,7 +322,7 @@ export const Admin = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                           <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button 
+                            <button
                               onClick={handleMaxOut}
                               className="group relative p-6 bg-red-600 hover:bg-red-500 rounded-3xl text-white transition-all overflow-hidden shadow-2xl shadow-red-600/20"
                             >
@@ -337,21 +337,21 @@ export const Admin = () => {
                             </button>
 
                             <div className="grid grid-cols-1 gap-4">
-                              <button 
+                              <button
                                 onClick={() => adminGiveCoins(selectedUser.uid, 100000)}
                                 className="p-4 bg-amber-500 hover:bg-amber-400 rounded-2xl text-black font-black text-xs flex items-center justify-between transition-all"
                               >
                                 <span>UNLIMITED MONEY</span>
                                 <Coins className="w-4 h-4" />
                               </button>
-                              <button 
+                              <button
                                 onClick={() => adminSetLevel(selectedUser.uid, 100, 25000)}
                                 className="p-4 bg-emerald-500 hover:bg-emerald-400 rounded-2xl text-white font-black text-xs flex items-center justify-between transition-all"
                               >
                                 <span>LEVEL UP (MAX)</span>
                                 <Zap className="w-4 h-4" />
                               </button>
-                             <button 
+                             <button
                                 onClick={() => adminSetStats(selectedUser.uid, { logic: 99, speed: 99, power: 99, intellect: 99, stamina: 99 })}
                                 className="p-4 bg-brand-primary hover:bg-brand-secondary rounded-2xl text-white font-black text-xs flex items-center justify-between transition-all"
                               >
@@ -361,7 +361,7 @@ export const Admin = () => {
                             </div>
                           </div>
 
-                         <button 
+                         <button
                            onClick={() => adminUnlockAllLessons(selectedUser.uid)}
                            className="group relative p-6 bg-teal-600 hover:bg-teal-500 rounded-3xl text-white transition-all overflow-hidden shadow-2xl shadow-teal-600/20"
                          >
@@ -369,7 +369,7 @@ export const Admin = () => {
                            <h4 className="text-lg font-black leading-tight italic">UNLOCK ALL LESSONS</h4>
                          </button>
 
-                         <button 
+                         <button
                            onClick={() => adminAddCoins(selectedUser.uid, 5000)}
                            className="group relative p-6 bg-amber-600 hover:bg-amber-500 rounded-3xl text-white transition-all overflow-hidden shadow-2xl shadow-amber-600/20"
                          >
@@ -377,7 +377,7 @@ export const Admin = () => {
                            <h4 className="text-lg font-black leading-tight italic">+5000 COINS</h4>
                          </button>
 
-                         <button 
+                         <button
                             onClick={() => {
                               setSelectedUser(null);
                               setLogs([]);
@@ -392,25 +392,25 @@ export const Admin = () => {
 
                       {}
                       <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar no-scrollbar mt-4">
-                         <button 
+                         <button
                            onClick={() => adminUpdateUserStats(selectedUser.uid, { logic: 99, speed: 99, power: 99, intellect: 99, stamina: 99 })}
                            className="px-6 py-3 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl text-[11px] font-black uppercase tracking-widest text-brand-primary hover:bg-brand-primary hover:text-black transition-all shrink-0"
                          >
                             ✨ Max Stats
                          </button>
-                         <button 
+                         <button
                            onClick={() => adminSetLevel(selectedUser.uid, (selectedUser?.level || 1) + 1, (selectedUser?.xp || 0) + 1000)}
                            className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[11px] font-black uppercase tracking-widest text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all shrink-0"
                          >
                             📈 Level Up +1
                          </button>
-                         <button 
+                         <button
                            onClick={() => adminAddCoins(selectedUser.uid, 100000)}
                            className="px-6 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-[11px] font-black uppercase tracking-widest text-amber-500 hover:bg-amber-500 hover:text-black transition-all shrink-0"
                          >
                             💰 +100k Money
                          </button>
-                         <button 
+                         <button
                            onClick={() => adminGiveItem(selectedUser.uid, 'legendary_chest')}
                            className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[11px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all shrink-0"
                          >
@@ -428,7 +428,7 @@ export const Admin = () => {
                           </h3>
                           <div className="space-y-4">
                             <div className="flex gap-3">
-                              <input aria-label="Количество монет" 
+                              <input aria-label="Количество монет"
                                 type="number"
                                 value={coinAmount}
                                 onChange={(e) => setCoinAmount(Number(e.target.value))}
@@ -437,7 +437,7 @@ export const Admin = () => {
                               <button onClick={handleUpdateCoins} className="px-8 bg-amber-500 text-black font-black rounded-2xl hover:scale-105 transition-all">ADD</button>
                             </div>
                             <div className="flex gap-3">
-                              <input aria-label="Уровень" 
+                              <input aria-label="Уровень"
                                 type="number"
                                 value={targetLevel}
                                 onChange={(e) => setTargetLevel(Number(e.target.value))}
@@ -493,7 +493,7 @@ export const Admin = () => {
                           ))}
                         </div>
                         <div className="flex gap-3">
-                          <input aria-label="Значение характеристики" 
+                          <input aria-label="Значение характеристики"
                             type="number"
                             value={statValue}
                             onChange={(e) => setStatValue(Number(e.target.value))}
@@ -582,7 +582,7 @@ export const Admin = () => {
           )}
 
           {activeTab === 'solutions' && (
-            <motion.div 
+            <motion.div
               key="solutions"
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -604,7 +604,7 @@ export const Admin = () => {
                     </div>
                     <div className="relative w-full md:w-96">
                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-                       <input aria-label="Search lessons/challenges..." 
+                       <input aria-label="Search lessons/challenges..."
                          type="text"
                          placeholder="Search lessons/challenges..."
                          value={solutionSearch}
@@ -621,8 +621,8 @@ export const Admin = () => {
                       key={lesson.id}
                       onClick={() => setSelectedLesson(lesson)}
                       className={`group p-6 rounded-3xl border transition-all text-left relative overflow-hidden ${
-                        selectedLesson?.id === lesson.id 
-                          ? 'bg-brand-primary/20 border-brand-primary shadow-xl' 
+                        selectedLesson?.id === lesson.id
+                          ? 'bg-brand-primary/20 border-brand-primary shadow-xl'
                           : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/[0.07]'
                       }`}
                     >
@@ -635,10 +635,10 @@ export const Admin = () => {
                         </div>
                         <h4 className="text-lg font-black text-white group-hover:text-brand-primary transition-colors">{lesson.title}</h4>
                         <p className="text-xs text-white/40 mt-2 line-clamp-2">{lesson.description}</p>
-                        
+
                         {}
                         {selectedUser && (
-                           <button 
+                           <button
                              onClick={(e) => {
                                e.stopPropagation();
                                handleCompleteTargetLesson(lesson.id);
@@ -657,14 +657,14 @@ export const Admin = () => {
               {}
               <AnimatePresence>
                 {selectedLesson && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md"
                     onClick={() => setSelectedLesson(null)}
                   >
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0.9, y: 20 }}
                       animate={{ scale: 1, y: 0 }}
                       className="w-full max-w-4xl bg-[#080d10] rounded-[3rem] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden"
@@ -704,7 +704,7 @@ export const Admin = () => {
                                    <h5 className="text-[11px] font-black text-brand-primary uppercase tracking-widest flex items-center gap-2">
                                       <Code2 className="w-4 h-4" /> CHALLENGE SOLUTIONS (1-5)
                                    </h5>
-                                   
+
                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                                       {(selectedLesson.challenges || (selectedLesson.challenge ? [selectedLesson.challenge] : [])).map((ch: any, idx: number) => {
                                          const solution = ch.code || ch.testCases?.[0]?.input || ch.answer || "# Решение не найдено";
@@ -714,7 +714,7 @@ export const Admin = () => {
                                                   <div className="px-3 py-1 bg-brand-primary/10 rounded-lg text-[11px] font-black text-brand-primary uppercase">
                                                      Task {idx + 1}
                                                   </div>
-                                                  <button 
+                                                  <button
                                                     onClick={() => {
                                                       navigator.clipboard.writeText(String(solution));
                                                       toast.success(`Task ${idx + 1} solution copied!`);
@@ -738,9 +738,9 @@ export const Admin = () => {
                                 </div>
                              </div>
                           </div>
-                          
+
                           <div className="flex justify-end pt-4">
-                             <button 
+                             <button
                                onClick={() => setSelectedLesson(null)}
                                className="px-10 py-4 bg-brand-primary text-black font-black rounded-2xl uppercase tracking-widest hover:scale-105 transition-all"
                              >
@@ -756,7 +756,7 @@ export const Admin = () => {
           )}
 
           {activeTab === 'system' && (
-            <motion.div 
+            <motion.div
                key="system"
                initial={{ opacity: 0, x: -20 }}
                animate={{ opacity: 1, x: 0 }}
@@ -790,7 +790,7 @@ export const Admin = () => {
           )}
 
           {activeTab === 'events' && (
-            <motion.div 
+            <motion.div
                key="events"
                initial={{ opacity: 0, scale: 0.98 }}
                animate={{ opacity: 1, scale: 1 }}
@@ -814,26 +814,26 @@ export const Admin = () => {
                      <div className="p-10 glass rounded-[2.5rem] border border-white/5 space-y-6">
                         <h3 className="text-2xl font-black italic mb-4 flex items-center gap-3"><Swords className="text-red-500" /> Глобальный Босс</h3>
                         <p className="text-white/40 text-sm leading-relaxed">
-                           Призовите древний вирус или баг, который весь сервер должен будет победить совместно. 
+                           Призовите древний вирус или баг, который весь сервер должен будет победить совместно.
                            HP босса синхронизируется между всеми игроками в реальном времени.
                         </p>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                           <button 
+                           <button
                              onClick={() => adminSpawnBoss('legacy_boss')}
                              className="p-6 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl transition-all shadow-lg"
                            >
                              SPAWN LEGACY
                            </button>
-                           <button 
+                           <button
                              onClick={() => adminSpawnBoss('omega_ai')}
                              className="p-6 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all shadow-lg"
                            >
                              SPAWN OMEGA AI
                            </button>
                         </div>
-                        
-                        <button 
+
+                        <button
                           onClick={async () => {
                             const { BossService } = await import('../services/BossService');
                             await BossService.rotateBosses();

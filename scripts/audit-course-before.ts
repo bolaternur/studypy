@@ -1,0 +1,10 @@
+import { writeFile } from 'node:fs/promises';
+import { LESSON_CATALOG } from '../src/constants/lesson-catalog';
+import { loadLesson } from '../src/constants/lessons';
+const lessons = await Promise.all(LESSON_CATALOG.map(meta => loadLesson(meta.id)));
+const rows = lessons.map(lesson => ({ id: lesson!.id, title: lesson!.title, headings: lesson!.sections?.map(s=>s.title) ?? [], paragraphs: lesson!.sections?.reduce((n,s)=>n+s.content.length,0) ?? 1, examples: lesson!.sections?.filter(s=>s.code).length ?? 0, codeTasks: (lesson!.challenges ?? (lesson!.challenge?[lesson!.challenge]:[])).length, quiz: Number(Boolean(lesson!.quiz)), explicitReview: false, explicitAssessment: false, explicitProject: false }));
+const header = '# Состояние каталога перед расширением, 17 октября 2026\n\nПроверены все загружаемые материалы, а не выборка из трёх страниц. Под «примером» считается отдельный исполняемый блок в теории; заголовки не считаются самостоятельными подтемами. Отдельной модели повторения, модулей, проектов и контрольных в прежней схеме нет. Это вывод по структуре кода, не измерение усвоения учениками.\n\n';
+const table = '| ID / тема | Фактические разделы | Абзацы | Примеры | Самостоятельный код | Quiz | Повторение / контрольная / проект |\n|---|---|---:|---:|---:|---:|---|\n'+rows.map(r=>`| ${r.id}: ${r.title} | ${r.headings.join('; ')} | ${r.paragraphs} | ${r.examples} | ${r.codeTasks} | ${r.quiz} | Отдельно не выделены |`).join('\n');
+await writeFile('docs/course-before-2026-10-17.md',header+table+'\n');
+await writeFile('docs/course-before-2026-10-17.json',JSON.stringify(rows,null,2)+'\n');
+console.log(JSON.stringify({lessons:rows.length,examples:rows.reduce((n,r)=>n+r.examples,0),codeTasks:rows.reduce((n,r)=>n+r.codeTasks,0),quizzes:rows.reduce((n,r)=>n+r.quiz,0)}));

@@ -1,78 +1,56 @@
-/**
- * Content lint for the StudyPy curriculum.
- * Fails the build when the lesson dataset loses structural integrity:
- * duplicate ids break routing and React keys, missing tests break grading.
- */
-import { LESSONS } from '../src/constants/lessons';
+import { LESSON_CATALOG, LESSON_ALIASES, normalizeLessonProgress } from '../src/constants/lesson-catalog';
+import { loadLesson } from '../src/constants/lessons';
 import { CURRICULUM_SUMMARY } from '../src/constants/curriculum-summary';
 
 const errors: string[] = [];
-const warnings: string[] = [];
-
-const ids = LESSONS.map((lesson) => lesson.id);
-const duplicateIds = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
-if (duplicateIds.length > 0) {
-  errors.push(`Duplicate lesson ids: ${duplicateIds.join(', ')}`);
-}
-
-let challengeCount = 0;
-let challengesWithoutTests = 0;
-
-for (const lesson of LESSONS) {
-  if (!lesson.title?.trim()) errors.push(`Lesson "${lesson.id}" has no title`);
-  if (!lesson.description?.trim()) errors.push(`Lesson "${lesson.id}" has no description`);
-
-  const sectionIds = (lesson.sections ?? []).map((section) => section.id);
-  const duplicateSections = [...new Set(sectionIds.filter((id, i) => sectionIds.indexOf(id) !== i))];
-  if (duplicateSections.length > 0) {
-    errors.push(`Lesson "${lesson.id}" has duplicate section ids: ${duplicateSections.join(', ')}`);
+const ids = LESSON_CATALOG.map(lesson => lesson.id);
+if (new Set(ids).size !== ids.length) errors.push('Lesson IDs must be unique');
+let tasks = 0;
+let cases = 0;
+const sectionsSeen = new Set<string>();
+for (const meta of LESSON_CATALOG) {
+  const lesson = await loadLesson(meta.id);
+  if (!lesson) { errors.push(`Missing content: ${meta.id}`); continue; }
+  const challenges = lesson.challenges ?? [];
+  if (challenges.length !== meta.challengeCount) errors.push(`${meta.id}: wrong challengeCount`);
+  if (!lesson.sources?.length || lesson.sources.some(url => !url.startsWith('https://'))) errors.push(`${meta.id}: primary sources required`);
+  if (!lesson.content.trim() || !lesson.description.trim()) errors.push(`${meta.id}: learning outcome required`);
+  if (!lesson.sections?.some(section => section.code && section.expectedOutput !== undefined)) errors.push(`${meta.id}: executable example and expected output required`);
+  for (const section of lesson.sections ?? []) {
+    if (sectionsSeen.has(section.id)) errors.push(`Duplicate section ID: ${section.id}`);
+    sectionsSeen.add(section.id);
+    if (!section.content.length || section.content.some(text => !text.trim())) errors.push(`${meta.id}: empty paragraph`);
   }
-
-  const challenges = lesson.challenges ?? (lesson.challenge ? [lesson.challenge] : []);
-  challengeCount += challenges.length;
-  for (const [index, challenge] of challenges.entries()) {
-    if (!challenge.testCases || challenge.testCases.length === 0) {
-      challengesWithoutTests += 1;
-      errors.push(`Lesson "${lesson.id}" challenge #${index + 1} has no test cases`);
-    }
-    if (!challenge.initialCode?.trim()) {
-      warnings.push(`Lesson "${lesson.id}" challenge #${index + 1} has no starter code`);
-    }
-  }
-
-  const quiz = lesson.quiz;
-  if (quiz) {
-    if (!Array.isArray(quiz.options) || quiz.options.length < 2) {
-      errors.push(`Lesson "${lesson.id}" quiz needs at least two options`);
-    } else if (quiz.answer < 0 || quiz.answer >= quiz.options.length) {
-      errors.push(`Lesson "${lesson.id}" quiz answer points at a missing option`);
+  const challengeIds = new Set<string>();
+  for (const challenge of challenges) {
+    const label = `${meta.id}/${challenge.id ?? challenge.question}`;
+    tasks++;
+    if (!challenge.id || challengeIds.has(challenge.id)) errors.push(`${label}: stable unique task ID required`);
+    challengeIds.add(challenge.id ?? '');
+    if (!challenge.question.trim() || !challenge.description.trim() || !challenge.initialCode.trim() || !challenge.code?.trim() || !challenge.hint?.trim()) errors.push(`${label}: missing question, condition, starter, reference or hint`);
+    if (!challenge.testCases.length) errors.push(`${label}: no tests`);
+    for (const test of challenge.testCases) {
+      cases++;
+      for (const legacy of ['input', 'inputValues', 'assertCode', 'isHidden']) {
+        if (legacy in test) errors.push(`${label}: removed test field ${legacy}`);
+      }
+      const hasValue = Object.hasOwn(test, 'expectedValue');
+      if (hasValue !== Boolean(test.expression)) errors.push(`${label}: expression and expectedValue must be paired`);
+      if (test.expectedOutput === undefined && !hasValue) errors.push(`${label}: no observable assertion`);
+      if (test.stdin?.some(line => typeof line !== 'string')) errors.push(`${label}: stdin must contain strings`);
+      if (test.setup && /\bprint\s*\(/.test(test.setup)) errors.push(`${label}: test setup must not print the answer`);
+      if (test.expression && /^\s*(?:print|exec)\s*\(/.test(test.expression)) errors.push(`${label}: expression must inspect a result, not execute or print a solution`);
     }
   }
 }
-
-// The landing page quotes these numbers without importing the dataset.
-// Keep the claim and the data in lockstep.
-if (CURRICULUM_SUMMARY.lessons !== LESSONS.length) {
-  errors.push(
-    `CURRICULUM_SUMMARY.lessons says ${CURRICULUM_SUMMARY.lessons} but the dataset has ${LESSONS.length}`,
-  );
+for (const [oldId, id] of Object.entries(LESSON_ALIASES)) {
+  if (ids.includes(oldId) || !ids.includes(id)) errors.push(`Invalid alias: ${oldId} -> ${id}`);
+  if ((await loadLesson(oldId))?.id !== id) errors.push(`Alias does not load: ${oldId}`);
+  if (normalizeLessonProgress([oldId,id,oldId]).join() !== id) errors.push(`Progress alias does not deduplicate: ${oldId}`);
 }
-if (CURRICULUM_SUMMARY.challenges !== challengeCount) {
-  errors.push(
-    `CURRICULUM_SUMMARY.challenges says ${CURRICULUM_SUMMARY.challenges} but the dataset has ${challengeCount}`,
-  );
-}
-
-console.log(`lessons: ${LESSONS.length} (${new Set(ids).size} unique ids)`);
-console.log(`challenges: ${challengeCount} (${challengesWithoutTests} without tests)`);
-
-for (const warning of warnings.slice(0, 20)) console.warn(`warn  ${warning}`);
-if (warnings.length > 20) console.warn(`warn  ...and ${warnings.length - 20} more warnings`);
-
-if (errors.length > 0) {
-  for (const error of errors.slice(0, 40)) console.error(`error ${error}`);
-  if (errors.length > 40) console.error(`error ...and ${errors.length - 40} more errors`);
-  process.exit(1);
-}
-
-console.log('curriculum OK');
+const requiredStart = ['intro','variables','type-conversion','math','input','booleans','if-else','loops','lists'];
+if (ids.slice(0, requiredStart.length).join() !== requiredStart.join()) errors.push('Fundamentals must follow prerequisite order');
+if (CURRICULUM_SUMMARY.lessons !== ids.length || CURRICULUM_SUMMARY.challenges !== tasks) errors.push('Summary does not match curriculum');
+console.log(`${ids.length} lessons; ${tasks} tasks; ${cases} meaningful cases; ${Object.keys(LESSON_ALIASES).length} legacy aliases`);
+if (errors.length) { errors.forEach(error => console.error(`error ${error}`)); process.exitCode = 1; }
+else console.log('Content structure OK. Run test:content to execute examples, references and negative regressions.');

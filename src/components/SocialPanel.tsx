@@ -6,6 +6,7 @@ import { ChatService, Chat, Message } from '../services/ChatService';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { playSound } from '../utils/sounds';
+import { useDialogFocus } from './Dialog';
 
 interface SocialPanelProps {
   isOpen: boolean;
@@ -15,6 +16,9 @@ interface SocialPanelProps {
 
 export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initialChatUserId }) => {
   const { currentUser } = useAuth();
+  const panelRef = useDialogFocus(isOpen, onClose);
+  const [sendError,setSendError]=useState('');
+  const sending=useRef(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -23,7 +27,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
   const [view, setView] = useState<'list' | 'chat'>('list');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  
+
   useEffect(() => {
     if (!currentUser || !isOpen) return;
     const unsubscribe = ChatService.subscribeToUserChats(currentUser.uid, (fetchedChats) => {
@@ -32,7 +36,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
     return () => unsubscribe();
   }, [currentUser, isOpen]);
 
-  
+
   useEffect(() => {
     if (initialChatUserId && currentUser && isOpen) {
       const startChat = async () => {
@@ -40,11 +44,11 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
         setActiveChatId(id);
         setView('chat');
       };
-      startChat();
+      void startChat().catch(()=>setSendError('Не удалось открыть диалог. Попробуй ещё раз.'));
     }
   }, [initialChatUserId, currentUser, isOpen]);
 
-  
+
   useEffect(() => {
     if (!activeChatId || !isOpen) return;
     const unsubscribe = ChatService.subscribeToMessages(activeChatId, (fetchedMessages) => {
@@ -53,13 +57,13 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
     return () => unsubscribe();
   }, [activeChatId, isOpen]);
 
-  
+
   useEffect(() => {
     const fetchPartner = async () => {
       if (!activeChatId || !currentUser) return;
       const chat = chats.find(c => c.id === activeChatId);
       if (!chat) return;
-      
+
       const partnerId = chat.participants.find(id => id !== currentUser.uid);
       if (!partnerId) return;
 
@@ -68,7 +72,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
         setChatPartner(docSnap.data() as UserProfile);
       }
     };
-    fetchPartner();
+    void fetchPartner().catch(()=>setSendError('Профиль собеседника пока недоступен.'));
   }, [activeChatId, chats, currentUser]);
 
   useEffect(() => {
@@ -76,12 +80,14 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
   }, [messages]);
 
   const handleSend = async () => {
-    if (!newMessage.trim() || !activeChatId || !currentUser) return;
+    if (!newMessage.trim() || !activeChatId || !currentUser || sending.current) return;
+    sending.current=true;setSendError('');
     const text = newMessage.trim();
     setNewMessage('');
     playSound('click');
-    await ChatService.sendMessage(activeChatId, currentUser.uid, text);
-    playSound('message');
+    try { await ChatService.sendMessage(activeChatId, currentUser.uid, text); playSound('message'); }
+    catch { setNewMessage(previous=>previous || text);setSendError('Не удалось отправить сообщение. Текст сохранён; попробуй ещё раз.'); }
+    finally { sending.current=false; }
   };
 
   return (
@@ -96,20 +102,22 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
             onClick={onClose}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
           />
-          
+
           {}
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            ref={panelRef} role="dialog" aria-modal="true" aria-label="Сообщения" tabIndex={-1}
             className="fixed top-0 right-0 h-full w-full max-w-md bg-[#04070a] border-l border-white/10 z-[70] flex flex-col shadow-2xl"
           >
             {}
+            {sendError && <p role="alert" className="p-4 text-rose-200">{sendError}</p>}
             <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
               <div className="flex items-center gap-3">
                 {view === 'chat' && (
-                  <button 
+                  <button
                     onClick={() => setView('list')}
                     className="p-2 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all mr-1"
                   >
@@ -128,8 +136,9 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
                   </p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={onClose}
+                aria-label="Закрыть сообщения"
                 className="p-2 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all"
               >
                 <X className="w-6 h-6" />
@@ -147,10 +156,10 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
                     </div>
                   ) : (
                     chats.map(chat => (
-                      <ChatListItem 
-                        key={chat.id} 
-                        chat={chat} 
-                        currentUid={currentUser?.uid || ''} 
+                      <ChatListItem
+                        key={chat.id}
+                        chat={chat}
+                        currentUid={currentUser?.uid || ''}
                         onClick={() => {
                           setActiveChatId(chat.id);
                           setView('chat');
@@ -167,8 +176,8 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
                     {messages.map((msg, i) => (
                       <div key={i} className={`flex ${msg.senderId === currentUser?.uid ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] p-4 rounded-[1.5rem] text-sm ${
-                          msg.senderId === currentUser?.uid 
-                            ? 'bg-brand-primary text-black font-bold rounded-br-none shadow-[0_4px_15px_rgba(52,211,153,0.3)]' 
+                          msg.senderId === currentUser?.uid
+                            ? 'bg-brand-primary text-black font-bold rounded-br-none shadow-[0_4px_15px_rgba(52,211,153,0.3)]'
                             : 'bg-white/5 border border-white/10 text-white/90 rounded-bl-none'
                         }`}>
                           {msg.text}
@@ -181,15 +190,15 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ isOpen, onClose, initi
                   {}
                   <div className="p-6 border-t border-white/10 bg-white/5">
                     <div className="relative group">
-                      <input aria-label="Сообщение" 
-                        type="text" 
+                      <input aria-label="Сообщение"
+                        type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                         placeholder="Напишите сообщение..."
                         className="w-full bg-black/60 border border-white/10 rounded-[1.5rem] py-4 pl-6 pr-14 text-white placeholder:text-white/50 outline-none focus:border-brand-primary transition-all shadow-inner"
                       />
-                      <button 
+                      <button
                         onClick={handleSend}
                         disabled={!newMessage.trim()}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-3 bg-brand-primary text-black rounded-full hover:scale-105 active:scale-95 transition-all disabled:opacity-0"
@@ -221,13 +230,13 @@ const ChatListItem: React.FC<{ chat: Chat, currentUid: string, onClick: () => vo
   if (!partner) return null;
 
   return (
-    <button 
+    <button
       onClick={onClick}
       className="w-full p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-brand-primary/30 hover:bg-white/10 transition-all flex items-center gap-4 text-left group"
     >
       <div className="relative">
         <img
-          src={partner.avatar || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${partner.uid}`} 
+          src={partner.avatar || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${partner.uid}`}
           className="w-12 h-12 rounded-xl bg-white/10 border border-white/10 p-1"
           alt={partner.username}
         />

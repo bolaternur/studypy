@@ -12,35 +12,38 @@ export const Guilds = () => {
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [myGuild, setMyGuild] = useState<Guild | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError,setLoadError]=useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  
+
   const [newGuildName, setNewGuildName] = useState('');
   const [newGuildDesc, setNewGuildDesc] = useState('');
   const [newGuildIcon, setNewGuildIcon] = useState('🛡️');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchGuilds = async () => {
+    setIsLoading(true);setLoadError('');
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const allGuilds = await GuildService.getAllGuilds();
+      const allGuilds = await Promise.race([GuildService.getAllGuilds(), new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('timeout')),12000);})]);
       setGuilds(allGuilds);
-      
+
       if (userProfile?.guildId) {
         const mg = allGuilds.find(g => g.id === userProfile.guildId);
         setMyGuild(mg || null);
       }
     } catch (error) {
       console.error('Error fetching guilds:', error);
-      toast.error('Ошибка загрузки гильдий');
+      setLoadError('Не удалось загрузить гильдии. Проверь соединение и попробуй ещё раз.');
     } finally {
-      setIsLoading(false);
+      clearTimeout(timer);setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchGuilds();
-    
-    
+
+
     let unsub: any;
     if (userProfile?.guildId) {
        unsub = GuildService.subscribeToGuild(userProfile.guildId, (g) => setMyGuild(g));
@@ -79,7 +82,7 @@ export const Guilds = () => {
 
   const handleLeaveGuild = async () => {
     if (!myGuild) return;
-    if (confirm('Вы уверены, что хотите покинуть гильдию?')) {
+    if (confirm('Покинуть гильдию?')) {
       try {
         setIsLoading(true);
         await GuildService.leaveGuild(myGuild.id);
@@ -92,6 +95,7 @@ export const Guilds = () => {
     }
   };
 
+  if (loadError) return <div className="page-container program-page"><h1>Гильдии</h1><p className="muted mt-4" role="alert">{loadError}</p><button className="secondary-button mt-5" onClick={()=>void fetchGuilds()}>Попробовать ещё раз</button></div>;
   if (isLoading && !guilds.length) {
     return (
       <div className="min-h-screen bg-[#04070a] flex items-center justify-center">
@@ -111,28 +115,28 @@ export const Guilds = () => {
               className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-brand-primary/10 border border-brand-primary/20 text-brand-primary mb-6"
             >
               <Shield className="w-5 h-5" />
-              <span className="text-sm font-black uppercase tracking-[0.3em]">Штаб Гильдий</span>
+              <span className="text-sm font-black uppercase tracking-[0.3em]">Группы сообщества</span>
             </motion.div>
             <h1 className="text-6xl font-display font-black tracking-tighter mb-4">
-              Альянсы <span className="text-brand-primary italic serif">Кодеров</span>
+              Гильдии
             </h1>
             <p className="text-white/40 text-xl font-medium">
-              Объединяйтесь с другими программистами, фармите общий XP и участвуйте в глобальных рейдах.
+              Объединяйся с участниками StudyPy и обсуждай задачи в чате группы.
             </p>
           </div>
-          
+
           {!myGuild && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="px-8 py-4 bg-white text-black font-black uppercase tracking-widest rounded-2xl flex items-center gap-3 hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]"
             >
-              <Plus className="w-5 h-5" /> Создать Гильдию
+              <Plus className="w-5 h-5" /> Создать гильдию
             </button>
           )}
         </header>
 
         {myGuild ? (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="glass rounded-[3rem] p-10 border border-brand-primary/30 shadow-2xl shadow-brand-primary/10 relative overflow-hidden"
@@ -140,7 +144,7 @@ export const Guilds = () => {
             <div className="absolute top-0 right-0 p-12 text-9xl opacity-5 pointer-events-none">
               {myGuild.icon}
             </div>
-            
+
             <div className="flex flex-col lg:flex-row gap-12 relative z-10">
               <div className="flex-1 space-y-8">
                 <div className="flex items-center gap-6">
@@ -151,35 +155,35 @@ export const Guilds = () => {
                     <h2 className="text-4xl font-black mb-2">{myGuild.name}</h2>
                     <div className="flex flex-wrap gap-4 text-sm font-bold text-white/40 uppercase tracking-widest">
                       <span className="flex items-center gap-2 text-brand-primary"><Star className="w-4 h-4" /> Уровень {myGuild.level}</span>
-                      <span className="flex items-center gap-2 text-emerald-500"><Users className="w-4 h-4" /> {myGuild.memberCount}/50 Участников</span>
+                      <span className="flex items-center gap-2 text-emerald-500"><Users className="w-4 h-4" /> {myGuild.memberCount}/50 участников</span>
                     </div>
                   </div>
                 </div>
-                
+
                 <p className="text-white/60 text-lg leading-relaxed max-w-2xl">
                   {myGuild.description}
                 </p>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="p-4 rounded-3xl bg-white/5 border border-white/10 text-center">
-                    <div className="text-white/40 text-[11px] uppercase tracking-widest mb-1">Опыт Гильдии</div>
-                    <div className="text-2xl font-black text-brand-primary font-mono">{myGuild.xp} XP</div>
+                    <div className="text-white/40 text-[11px] uppercase tracking-widest mb-1">Игровой опыт гильдии</div>
+                    <div className="text-2xl font-black text-brand-primary font-mono">{myGuild.xp}</div>
                   </div>
                   <div className="p-4 rounded-3xl bg-white/5 border border-white/10 text-center">
-                    <div className="text-white/40 text-[11px] uppercase tracking-widest mb-1">Требуемый Уровень</div>
+                    <div className="text-white/40 text-[11px] uppercase tracking-widest mb-1">Требуемый игровой уровень</div>
                     <div className="text-2xl font-black">{myGuild.requiredLevel}</div>
                   </div>
                   <div className="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-center lg:col-span-2 flex items-center justify-center gap-3">
                     <Sparkles className="w-6 h-6 text-emerald-400 animate-pulse" />
                     <div>
-                       <div className="text-emerald-500/60 text-[11px] uppercase tracking-widest font-black">Бонус Гильдии</div>
-                       <div className="text-emerald-400 font-bold text-sm">+5% Опыта за уроки всем участникам</div>
+                       <div className="text-emerald-500/60 text-[11px] uppercase tracking-widest font-black">Учебный прогресс</div>
+                       <div className="text-emerald-400 font-bold text-sm">Начисление игровых бонусов за уроки отключено</div>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4 pt-6 border-t border-white/10">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-white/40 mb-4">Участники Гильдии</h3>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-white/40 mb-4">Участники гильдии</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {myGuild.members.map(member => (
                       <div key={member.uid} className="flex items-center justify-between p-4 rounded-2xl bg-black/40 border border-white/5">
@@ -189,7 +193,7 @@ export const Guilds = () => {
                           </div>
                           <div>
                             <span className="font-bold flex items-center gap-2">{member.username} {member.role === 'leader' && <Trophy className="w-3 h-3 text-amber-500" />}</span>
-                            <span className="text-[11px] text-white/40 uppercase tracking-widest block mt-0.5">Вклад: {member.contribution} XP</span>
+                            <span className="text-[11px] text-white/40 uppercase tracking-widest block mt-0.5">Игровой вклад: {member.contribution}</span>
                           </div>
                         </div>
                       </div>
@@ -197,7 +201,7 @@ export const Guilds = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="w-full lg:w-80 space-y-4">
                 <Link
                   to="/boss-arena"
@@ -205,11 +209,11 @@ export const Guilds = () => {
                 >
                   <Swords className="w-4 h-4" /> Испытания
                 </Link>
-                <button 
+                <button
                   onClick={handleLeaveGuild}
                   className="w-full py-4 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all"
                 >
-                  <LogOut className="w-4 h-4" /> Покинуть Гильдию
+                  <LogOut className="w-4 h-4" /> Покинуть гильдию
                 </button>
                 <GuildChat guildId={myGuild.id} />
               </div>
@@ -228,14 +232,14 @@ export const Guilds = () => {
                 <div className="absolute top-0 right-0 p-8 text-7xl opacity-5 group-hover:scale-125 group-hover:opacity-10 transition-all duration-500 pointer-events-none">
                   {guild.icon}
                 </div>
-                
+
                 <div className="relative z-10 flex-grow">
                   <div className="w-16 h-16 bg-white/5 rounded-[1.5rem] flex items-center justify-center text-3xl shadow-xl mb-6 border border-white/10 group-hover:border-brand-primary/50 transition-colors">
                     {guild.icon}
                   </div>
                   <h3 className="text-2xl font-black text-white mb-2 line-clamp-1">{guild.name}</h3>
                   <p className="text-white/40 text-sm leading-relaxed line-clamp-2 h-10 mb-6">{guild.description}</p>
-                  
+
                   <div className="space-y-2 mb-8">
                     <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-white/50">
                       <Star className="w-3.5 h-3.5" /> Уровень {guild.level}
@@ -244,13 +248,13 @@ export const Guilds = () => {
                       <Shield className="w-3.5 h-3.5" /> Требуется {guild.requiredLevel} ур.
                     </div>
                     <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-emerald-500">
-                      <Users className="w-3.5 h-3.5" /> {guild.memberCount}/50 Участников
+                      <Users className="w-3.5 h-3.5" /> {guild.memberCount}/50 участников
                     </div>
                   </div>
                 </div>
 
                 <div className="relative z-10 pt-6 border-t border-white/10">
-                  <button 
+                  <button
                     onClick={() => handleJoinGuild(guild.id)}
                     disabled={isLoading || (userProfile?.level || 0) < guild.requiredLevel}
                     className="w-full py-4 bg-white/5 text-white font-black rounded-2xl text-[11px] uppercase tracking-[0.2em] hover:bg-brand-primary hover:text-black transition-all disabled:opacity-30 flex items-center justify-center gap-2"
@@ -278,12 +282,12 @@ export const Guilds = () => {
               exit={{ scale: 0.9, y: 20 }}
               className="w-full max-w-lg glass rounded-[3rem] p-10 border border-brand-primary/30 shadow-2xl"
             >
-              <h2 className="text-3xl font-black mb-2">Создать Альянс</h2>
-              <p className="text-white/40 text-sm mb-8 font-medium">Станьте лидером и ведите свою команду к вершинам рейтинга.</p>
+              <h2 className="text-3xl font-black mb-2">Создать гильдию</h2>
+              <p className="text-white/40 text-sm mb-8 font-medium">Назови группу и кратко опиши её цель.</p>
 
               <form onSubmit={handleCreateGuild} className="space-y-6">
                 <div>
-                  <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-3">Название (Макс. 20 симв.)</label>
+                  <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-3">Название (до 20 символов)</label>
                   <input aria-label="Название гильдии"
                     type="text"
                     required
@@ -295,7 +299,7 @@ export const Guilds = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-3">Стиль (Эмодзи)</label>
+                  <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-3">Значок группы</label>
                   <div className="flex gap-3">
                     {['🛡️', '🐍', '⚔️', '🦅', '🦁', '🔮'].map(emoji => (
                       <button
@@ -310,7 +314,7 @@ export const Guilds = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-3">Описание (Манифест)</label>
+                  <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-3">Описание</label>
                   <textarea aria-label="Описание гильдии"
                     required
                     maxLength={150}
@@ -318,10 +322,10 @@ export const Guilds = () => {
                     onChange={e => setNewGuildDesc(e.target.value)}
                     rows={3}
                     className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-brand-primary transition-colors resize-none text-sm"
-                    placeholder="Мы учимся писать чистый код и сражаемся с багами..."
+                    placeholder="Например: вместе решаем задачи по Python"
                   />
                 </div>
-                
+
                 <div className="flex gap-4 pt-4">
                   <button
                     type="button"
@@ -335,7 +339,7 @@ export const Guilds = () => {
                     disabled={isSubmitting}
                     className="flex-1 py-4 rounded-xl bg-brand-primary text-black font-black text-sm uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
                   >
-                    {isSubmitting ? 'Создаем...' : 'Создать'}
+                    {isSubmitting ? 'Создаём…' : 'Создать'}
                   </button>
                 </div>
               </form>
