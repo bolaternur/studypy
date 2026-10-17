@@ -13,21 +13,22 @@ export interface FriendRequest {
 }
 
 export const SocialService = {
-  
+
   searchUsersPartial: async (queryText: string) => {
     if (!auth.currentUser || !queryText) return [];
-    
-    
+
+
     const q = query(collection(db, 'users'), limit(500));
     const snap = await getDocs(q);
-    
+    if(snap.metadata.fromCache && snap.empty) throw new Error('Нет подключения. Повтори поиск после восстановления сети.');
+
     const lowerQuery = queryText.toLowerCase();
     return snap.docs
       .map(doc => ({ uid: doc.id, ...doc.data() as any }))
       .filter(u => u.uid !== auth.currentUser?.uid && u.username?.toLowerCase().includes(lowerQuery));
   },
 
-  
+
   sendFriendRequest: async (targetUserId: string, targetUsername: string) => {
     if (!auth.currentUser) throw new Error('Not authenticated');
     if (targetUserId === auth.currentUser.uid) throw new Error('Вы не можете добавить себя в друзья');
@@ -54,7 +55,7 @@ export const SocialService = {
   subscribeToIncomingRequests: (callback: (reqs: FriendRequest[]) => void) => {
      if (!auth.currentUser) return () => {};
      const q = query(
-       collection(db, 'friend_requests'), 
+       collection(db, 'friend_requests'),
        where('receiverId', '==', auth.currentUser.uid),
        where('status', '==', 'pending')
      );
@@ -66,12 +67,13 @@ export const SocialService = {
 
   fetchFriendsProfiles: async (friendIds: string[]) => {
     if (!friendIds || friendIds.length === 0) return [];
-    
+
     const profiles: DocumentData[] = [];
     for (let i = 0; i < friendIds.length; i += 10) {
       const chunk = friendIds.slice(i, i + 10);
       const q = query(collection(db, 'users'), where('__name__', 'in', chunk));
       const snap = await getDocs(q);
+    if(snap.metadata.fromCache && snap.empty) throw new Error('Нет подключения. Повтори поиск после восстановления сети.');
       snap.forEach(doc => profiles.push(doc.data()));
     }
     return profiles;

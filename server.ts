@@ -9,9 +9,11 @@ import { App as FirebaseAdminApp, cert, getApps, initializeApp } from "firebase-
 import { getAuth as getFirebaseAdminAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import firebaseConfig from "./firebase-applet-config.json";
-import { LESSONS } from "./src/constants/lessons";
+import { LESSON_CATALOG, resolveLessonId } from "./src/constants/lesson-catalog";
+import { rejectUnverifiedResult, personalProgress } from "./src/services/resultPolicy";
+import { ITEM_EFFECTS } from "./src/constants/item-effects";
 import { PERKS } from "./src/constants/perks";
-import { answerFromKnowledge, type LessonIndexEntry } from "./src/constants/mentor-knowledge";
+import { answerFromKnowledge, hintFromKnowledge, type LessonIndexEntry } from "./src/constants/mentor-knowledge";
 import "dotenv/config";
 
 type RoomType = "duel" | "sandbox";
@@ -54,78 +56,19 @@ const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.proj
 const firebaseIssuer = `https://securetoken.google.com/${firebaseProjectId}`;
 
 const SHOP_CATALOG = new Map([
-  ["xp_boost_1", { name: "XP Буст (1ч)", price: 500 }],
-  ["shield_1", { name: "Защита серии", price: 300 }],
-  ["extra_life_1", { name: "Дополнительная жизнь", price: 200 }],
-  ["premium_avatar_1", { name: "Золотая рамка", price: 1000 }],
+  ["xp_boost_1", { name: "250 игровых XP", price: 500 }],
+
+
+
 ]);
-const LESSON_IDS = new Set(LESSONS.map((lesson) => lesson.id));
+const LESSON_IDS = new Set(LESSON_CATALOG.map((lesson) => lesson.id));
 // Title/description only — the mentor's offline retrieval never needs
 // the full lesson bodies, and keeping the index small keeps it fast.
-const LESSON_INDEX: LessonIndexEntry[] = LESSONS.map((lesson) => ({
+const LESSON_INDEX: LessonIndexEntry[] = LESSON_CATALOG.map((lesson) => ({
   id: lesson.id,
   title: lesson.title,
   description: lesson.description,
 }));
-const LESSON_XP_REWARD = 50;
-const LESSON_COIN_REWARD = 50;
-const ARCADE_REWARDS = new Map([
-  ["pyarcade", { xp: 100, coins: 50 }],
-  ["speedtyper", { xp: 75, coins: 38 }],
-  ["logicgates", { xp: 100, coins: 50 }],
-  ["syntaxmatch", { xp: 120, coins: 60 }],
-  ["snake", { xp: 100, coins: 50 }],
-  ["debugrush", { xp: 250, coins: 125 }],
-  ["predictor", { xp: 300, coins: 150 }],
-  ["regexracer", { xp: 160, coins: 80 }],
-  ["algoascent", { xp: 200, coins: 100 }],
-  ["triviachase", { xp: 80, coins: 40 }],
-]);
-const SOLO_BOSS_REWARDS = new Map([
-  ["b1", { xp: 500, coins: 300 }],
-  ["b2", { xp: 1000, coins: 600 }],
-]);
-const TOURNAMENT_REWARDS = new Map([
-  ["t_1", { xp: 1500, coins: 150 }],
-  ["t_2", { xp: 1500, coins: 150 }],
-  ["t_3", { xp: 1500, coins: 150 }],
-  ["t_4", { xp: 1500, coins: 150 }],
-  ["t_5", { xp: 1500, coins: 150 }],
-]);
-type StatName = "logic" | "speed" | "power" | "intellect" | "stamina";
-interface ItemEffect {
-  message: string;
-  xp?: number;
-  stats?: Partial<Record<StatName, number>>;
-  petStats?: Partial<Record<StatName, number>>;
-  randomPetStat?: { amount: number; stats: StatName[] };
-}
-const ITEM_EFFECTS = new Map<string, ItemEffect>([
-  ["logic_booster", { message: "Логика повышена на 5!", stats: { logic: 5 } }],
-  ["speed_serum", { message: "Скорость повышена на 5!", stats: { speed: 5 } }],
-  ["power_gloves", { message: "Сила повышена на 5!", stats: { power: 5 } }],
-  ["intellect_chip", { message: "Интеллект повышен на 5!", stats: { intellect: 5 } }],
-  ["stamina_drink", { message: "Выносливость повышена на 5!", stats: { stamina: 5 } }],
-  ["apple_red", { message: "Логика питомца повышена на 5!", petStats: { logic: 5 } }],
-  ["coffee_cup", { message: "Скорость питомца повышена на 5!", petStats: { speed: 5 } }],
-  ["burger_king", { message: "Сила питомца повышена на 5!", petStats: { power: 5 } }],
-  ["brain_boost", { message: "Интеллект питомца повышен на 8!", petStats: { intellect: 8 } }],
-  ["energy_drink", { message: "Скорость питомца повышена на 8!", petStats: { speed: 8 } }],
-  ["pizza_slice", { message: "Логика и сила питомца повышены!", petStats: { logic: 2, power: 3 } }],
-  ["bit_bot_food", { message: "Бит-Бот накормлен! +10 к случайной характеристике питомца.", randomPetStat: { amount: 10, stats: ["logic", "speed", "power", "intellect"] } }],
-  ["data_crystal", { message: "Вы получили 100 XP!", xp: 100 }],
-  ["coding_manual", { message: "Вы получили 50 XP и массу знаний!", xp: 50 }],
-  ["xp_boost_1", { message: "Использован XP Буст! +250 XP!", xp: 250 }],
-  ["xp_boost_2", { message: "Использован Супер XP Буст! +600 XP!", xp: 600 }],
-  ["scroll_logic", { message: "Свиток логики: +10!", stats: { logic: 10 } }],
-  ["scroll_speed", { message: "Свиток скорости: +10!", stats: { speed: 10 } }],
-  ["scroll_power", { message: "Свиток силы: +10!", stats: { power: 10 } }],
-  ["scroll_intellect", { message: "Свиток интеллекта: +10!", stats: { intellect: 10 } }],
-  ["scroll_stamina", { message: "Свиток выносливости: +10!", stats: { stamina: 10 } }],
-  ["ancient_scroll", { message: "Древний манускрипт: все характеристики +5!", stats: { logic: 5, speed: 5, power: 5, intellect: 5, stamina: 5 } }],
-  ["guido_wisdom", { message: "Мудрость Гвидо: +1000 XP!", xp: 1000 }],
-  ["quantum_core", { message: "Квантовое ядро: все характеристики +10!", stats: { logic: 10, speed: 10, power: 10, intellect: 10, stamina: 10 } }],
-]);
 const PET_TYPES = new Set(["pixel-slime", "code-cube", "bit-spark", "logic-owl", "cyber-cat", "ghost-shell", "dragon-bit"]);
 const DEFAULT_PET = {
   name: "Bit-Bot",
@@ -361,10 +304,10 @@ const offlineChat = (question: string): MentorReply => {
  */
 const offlineHint = (challenge: string, code: string, error?: string): MentorReply => {
   if (error && error.trim().length > 0) {
-    const fromError = answerFromKnowledge(error, LESSON_INDEX);
+    const fromError = hintFromKnowledge(error, LESSON_INDEX);
     if (fromError.matched) {
       return {
-        text: `Смотрю на вашу ошибку.
+        text: `По сообщению об ошибке:
 
 ${fromError.text}`,
         source: "offline",
@@ -373,7 +316,7 @@ ${fromError.text}`,
     }
   }
 
-  const fromChallenge = answerFromKnowledge(challenge, LESSON_INDEX);
+  const fromChallenge = hintFromKnowledge(challenge, LESSON_INDEX);
   if (fromChallenge.matched) {
     return {
       text: `По теме этой задачи:
@@ -384,25 +327,11 @@ ${fromChallenge.text}`,
     };
   }
 
-  const hasPrint = /\bprint\s*\(/.test(code);
-  const hasReturn = /\breturn\b/.test(code);
-  const hasDef = /\bdef\s+\w+/.test(code);
-
-  const checklist: string[] = [];
-  if (hasDef && !hasReturn && hasPrint) {
-    checklist.push(
-      "В функции есть `print`, но нет `return`. Проверяющая система смотрит на **возвращаемое** значение — " +
-      "печать на экран она не засчитывает.",
-    );
-  }
-  if (hasDef && !hasReturn && !hasPrint) {
-    checklist.push("Функция объявлена, но ничего не возвращает — добавьте `return` с результатом.");
-  }
-  if (!hasDef && challenge.length > 0) {
-    checklist.push("Убедитесь, что функция названа ровно так, как требует условие задачи.");
-  }
-  checklist.push("Сверьте вывод с ожидаемым посимвольно: лишний пробел или другой регистр — уже несовпадение.");
-  checklist.push("Проверьте граничные случаи: пустой список, ноль, отрицательное число.");
+  const checklist = [
+    "Сверь условие с результатом: нужен вывод через print или значение, возвращаемое функцией?",
+    "Прочитай последнюю строку ошибки и проверь указанное место в коде.",
+    "Проверь один простой пример вручную, затем границу: ноль, пустую коллекцию или отрицательное число, если они допустимы.",
+  ];
 
   return {
     text:
@@ -443,7 +372,7 @@ export async function createServerApp() {
     }
   });
 
-  
+
   const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
   const model = geminiApiKey
     ? new GoogleGenerativeAI(geminiApiKey).getGenerativeModel({ model: "gemini-1.5-flash" })
@@ -462,7 +391,7 @@ export async function createServerApp() {
   });
   app.use(express.json({ limit: "64kb" }));
 
-  
+
   const rooms = new Map<string, Room>();
   let waitingDuelSocketId: string | null = null;
 
@@ -509,30 +438,7 @@ export async function createServerApp() {
       }
     });
 
-    socket.on("find_duel", () => {
-      const waitingSocket = waitingDuelSocketId
-        ? io.sockets.sockets.get(waitingDuelSocketId)
-        : undefined;
-
-      if (!waitingSocket || waitingSocket.id === socket.id) {
-        waitingDuelSocketId = socket.id;
-        socket.emit("duel_waiting");
-        return;
-      }
-
-      const roomId = `duel_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const players = [waitingSocket.id, socket.id];
-      waitingSocket.join(roomId);
-      socket.join(roomId);
-      rooms.set(roomId, { players, state: {}, type: 'duel', lastActivity: Date.now() });
-      waitingDuelSocketId = null;
-
-      io.to(roomId).emit("duel_start", {
-        roomId,
-        players,
-        challengeIndex: Math.floor(Math.random() * 3)
-      });
-    });
+    socket.on("find_duel", () => socket.emit("duel_unavailable", {code:"TRUSTED_EXECUTION_UNAVAILABLE",message:"Дуэли временно недоступны: сервер пока не проверяет выполнение Python."}));
 
     socket.on("code_update", (payload: unknown) => {
       if (!isRecord(payload)) return;
@@ -594,19 +500,7 @@ export async function createServerApp() {
       });
     });
 
-    socket.on("duel_action", (payload: unknown) => {
-      if (!isRecord(payload)) return;
-      const roomId = readString(payload.roomId, 100);
-      const action = readString(payload.action, 40);
-      if (!roomId || !action || !["finish", "timeout"].includes(action)) return;
-      const room = rooms.get(roomId);
-      if (!room || room.type !== 'duel' || !room.players.includes(socket.id)) return;
-      room.lastActivity = Date.now();
-      io.to(roomId).emit("duel_event", { playerId: socket.id, action });
-      if (action === 'finish' || action === 'timeout') {
-        rooms.delete(roomId);
-      }
-    });
+    socket.on("duel_action", () => socket.emit("duel_unavailable", {code:"TRUSTED_EXECUTION_UNAVAILABLE"}));
 
     socket.on("disconnect", () => {
       if (waitingDuelSocketId === socket.id) {
@@ -628,7 +522,7 @@ export async function createServerApp() {
     });
   });
 
-  
+
   /**
    * Readiness, not just liveness.
    *
@@ -645,372 +539,52 @@ export async function createServerApp() {
       // back to the local knowledge base.
       mentorAi: model !== null,
       realtime: true,
+      competitiveResults: false,
+      progressSync: firebaseAdminDb !== null,
     };
     const degraded = Object.values(capabilities).some((available) => !available);
     res.json({ status: degraded ? "degraded" : "ok", capabilities });
   });
 
+  // Personal progress sync is explicitly self reported. No economy/rating updates here.
   app.post("/api/lessons/complete", requireAuth, rateLimit("lesson-complete", 30, 60_000), async (req, res) => {
     const identity = (req as AuthenticatedRequest).identity;
-    const lessonId = readString(req.body?.lessonId, 200);
-    if (!identity || !firebaseAdminDb) {
-      res.status(503).json({ error: "Trusted lesson service is not configured" });
-      return;
-    }
+    const rawId = readString(req.body?.lessonId, 200);
+    const lessonId = rawId ? resolveLessonId(rawId) : undefined;
     if (!lessonId || !LESSON_IDS.has(lessonId)) {
-      res.status(400).json({ error: "Unknown lesson" });
-      return;
+      res.status(400).json({ error: "Урок не найден" }); return;
     }
-
+    if (!identity || !firebaseAdminDb) {
+      res.status(503).json({ error: "Синхронизация прогресса сейчас недоступна. Результат можно сохранить на устройстве." }); return;
+    }
     try {
-      const result = await firebaseAdminDb.runTransaction(async (transaction) => {
+      const result = await firebaseAdminDb.runTransaction(async transaction => {
         const userRef = firebaseAdminDb.collection("users").doc(identity.uid);
         const snapshot = await transaction.get(userRef);
         if (!snapshot.exists) throw new Error("USER_NOT_FOUND");
         const profile = snapshot.data()!;
-        const completedLessons = Array.isArray(profile.completedLessons)
-          ? profile.completedLessons.filter((value: unknown): value is string => typeof value === "string")
-          : [];
-        if (completedLessons.includes(lessonId)) throw new Error("ALREADY_COMPLETED");
-
-        const xp = Math.max(0, Number(profile.xp) || 0) + LESSON_XP_REWARD;
-        const coins = Math.max(0, Number(profile.coins) || 0) + LESSON_COIN_REWARD;
-        const level = Math.floor(xp / 250) + 1;
-        const skillPoints = Math.max(0, Number(profile.skillPoints) || 0) + Math.max(0, level - (Number(profile.level) || 1)) * 5;
-        const nextCompletedLessons = [...completedLessons, lessonId];
-        transaction.update(userRef, {
-          completedLessons: nextCompletedLessons,
-          xp,
-          coins,
-          level,
-          skillPoints,
-        });
-        return { completedLessons: nextCompletedLessons, xp, coins, level, skillPoints };
-      });
-      res.json(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "USER_NOT_FOUND") {
-        res.status(404).json({ error: "User profile was not found" });
-        return;
-      }
-      if (message === "ALREADY_COMPLETED") {
-        res.status(409).json({ error: "Lesson has already been completed" });
-        return;
-      }
-      console.error("Lesson completion transaction failed");
-      res.status(500).json({ error: "Unable to complete lesson" });
-    }
-  });
-
-  app.post("/api/daily-challenges/complete", requireAuth, rateLimit("daily-challenge-complete", 10, 60_000), async (req, res) => {
-    const identity = (req as AuthenticatedRequest).identity;
-    const challengeId = readString(req.body?.challengeId, 200);
-    if (!identity || !firebaseAdminDb) {
-      res.status(503).json({ error: "Trusted daily challenge service is not configured" });
-      return;
-    }
-    if (!challengeId || !/^[A-Za-z0-9_-]+$/.test(challengeId)) {
-      res.status(400).json({ error: "Invalid daily challenge" });
-      return;
-    }
-
-    try {
-      const result = await firebaseAdminDb.runTransaction(async (transaction) => {
-        const dateKey = getDailyChallengeDate();
-        const userRef = firebaseAdminDb.collection("users").doc(identity.uid);
-        const isBackupChallenge = new RegExp(`^backup_${dateKey}_\\d$`).test(challengeId);
-        const isGeneratedChallenge = challengeId === "ai_daily";
-        const questRef = !isBackupChallenge && !isGeneratedChallenge
-          ? firebaseAdminDb.collection("ai_quests").doc(challengeId)
-          : null;
-        const [userSnapshot, questSnapshot] = await Promise.all([
-          transaction.get(userRef),
-          questRef ? transaction.get(questRef) : Promise.resolve(null),
-        ]);
-        if (!userSnapshot.exists) throw new Error("USER_NOT_FOUND");
-
-        let xpReward = 50;
-        let coinReward = 25;
-        if (questSnapshot) {
-          if (!questSnapshot.exists) throw new Error("CHALLENGE_NOT_FOUND");
-          const quest = questSnapshot.data()!;
-          const reward = isRecord(quest.reward) ? quest.reward : null;
-          const candidateXp = Number(reward?.xp);
-          const candidateCoins = Number(reward?.coins);
-          if (quest.dateStr !== dateKey || !Number.isSafeInteger(candidateXp) || !Number.isSafeInteger(candidateCoins)
-            || candidateXp < 1 || candidateXp > 300 || candidateCoins < 1 || candidateCoins > 200) {
-            throw new Error("INVALID_CHALLENGE");
-          }
-          xpReward = candidateXp;
-          coinReward = candidateCoins;
+        const result = personalProgress(profile, lessonId);
+        if (!Array.isArray(profile.completedLessons) || !profile.completedLessons.includes(lessonId)) {
+          transaction.update(userRef, { completedLessons: result.completedLessons, learningProgressTrust: result.trust });
         }
-
-        const profile = userSnapshot.data()!;
-        const completedChallenges = Array.isArray(profile.completedDailyChallenges)
-          ? profile.completedDailyChallenges.filter((value: unknown): value is string => typeof value === "string")
-          : [];
-        const completionId = `${dateKey}_${challengeId}`;
-        if (completedChallenges.includes(completionId)) throw new Error("ALREADY_COMPLETED");
-
-        const xp = Math.max(0, Number(profile.xp) || 0) + xpReward;
-        const coins = Math.max(0, Number(profile.coins) || 0) + coinReward;
-        const level = Math.floor(xp / 250) + 1;
-        const skillPoints = Math.max(0, Number(profile.skillPoints) || 0) + Math.max(0, level - (Number(profile.level) || 1)) * 5;
-        const nextCompletedChallenges = [...completedChallenges, completionId];
-        transaction.update(userRef, {
-          completedDailyChallenges: nextCompletedChallenges,
-          xp,
-          coins,
-          level,
-          skillPoints,
-        });
-        return {
-          completedDailyChallenges: nextCompletedChallenges,
-          xp,
-          coins,
-          level,
-          skillPoints,
-          reward: { xp: xpReward, coins: coinReward },
-        };
+        return result;
       });
       res.json(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "USER_NOT_FOUND" || message === "CHALLENGE_NOT_FOUND") {
-        res.status(404).json({ error: "Daily challenge was not found" });
-        return;
-      }
-      if (message === "ALREADY_COMPLETED") {
-        res.status(409).json({ error: "Daily challenge has already been completed" });
-        return;
-      }
-      if (message === "INVALID_CHALLENGE") {
-        res.status(409).json({ error: "Daily challenge is not available today" });
-        return;
-      }
-      console.error("Daily challenge completion transaction failed");
-      res.status(500).json({ error: "Unable to complete daily challenge" });
+      console.error("Personal learning progress sync failed");
+      res.status(error instanceof Error && error.message === "USER_NOT_FOUND" ? 404 : 500).json({ error: "Не удалось синхронизировать прогресс. Попробуй ещё раз." });
     }
   });
 
-  app.post("/api/arcade/complete", requireAuth, rateLimit("arcade-complete", 20, 60_000), async (req, res) => {
-    const identity = (req as AuthenticatedRequest).identity;
-    const gameId = readString(req.body?.gameId, 50);
-    const reward = gameId ? ARCADE_REWARDS.get(gameId) : undefined;
-    if (!identity || !firebaseAdminDb) {
-      res.status(503).json({ error: "Trusted arcade service is not configured" });
-      return;
-    }
-    if (!gameId || !reward) {
-      res.status(400).json({ error: "Unknown arcade game" });
-      return;
-    }
+  app.post("/api/daily-challenges/complete", requireAuth, rateLimit("daily-challenges-complete", 10, 60_000), rejectUnverifiedResult);
 
-    try {
-      const result = await firebaseAdminDb.runTransaction(async (transaction) => {
-        const userRef = firebaseAdminDb.collection("users").doc(identity.uid);
-        const snapshot = await transaction.get(userRef);
-        if (!snapshot.exists) throw new Error("USER_NOT_FOUND");
-        const profile = snapshot.data()!;
-        const claims = Array.isArray(profile.arcadeRewardClaims)
-          ? profile.arcadeRewardClaims.filter((value: unknown): value is string => typeof value === "string")
-          : [];
-        const claimId = `${getDailyChallengeDate()}_${gameId}`;
-        if (claims.includes(claimId)) throw new Error("ALREADY_CLAIMED");
+  app.post("/api/arcade/complete", requireAuth, rateLimit("arcade-complete", 10, 60_000), rejectUnverifiedResult);
 
-        const xp = Math.max(0, Number(profile.xp) || 0) + reward.xp;
-        const coins = Math.max(0, Number(profile.coins) || 0) + reward.coins;
-        const level = Math.floor(xp / 250) + 1;
-        const skillPoints = Math.max(0, Number(profile.skillPoints) || 0) + Math.max(0, level - (Number(profile.level) || 1)) * 5;
-        const arcadeRewardClaims = [...claims, claimId].slice(-3650);
-        transaction.update(userRef, { xp, coins, level, skillPoints, arcadeRewardClaims });
-        return { xp, coins, level, skillPoints, reward };
-      });
-      res.json(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "USER_NOT_FOUND") {
-        res.status(404).json({ error: "User profile was not found" });
-        return;
-      }
-      if (message === "ALREADY_CLAIMED") {
-        res.status(409).json({ error: "This arcade reward has already been claimed today" });
-        return;
-      }
-      console.error("Arcade reward transaction failed");
-      res.status(500).json({ error: "Unable to grant arcade reward" });
-    }
-  });
+  app.post("/api/bosses/complete", requireAuth, rateLimit("bosses-complete", 10, 60_000), rejectUnverifiedResult);
 
-  app.post("/api/bosses/complete", requireAuth, rateLimit("solo-boss-complete", 10, 60_000), async (req, res) => {
-    const identity = (req as AuthenticatedRequest).identity;
-    const bossId = readString(req.body?.bossId, 50);
-    const reward = bossId ? SOLO_BOSS_REWARDS.get(bossId) : undefined;
-    if (!identity || !firebaseAdminDb) {
-      res.status(503).json({ error: "Trusted boss service is not configured" });
-      return;
-    }
-    if (!bossId || !reward) {
-      res.status(400).json({ error: "Unknown boss" });
-      return;
-    }
+  app.post("/api/bosses/global/contribute", requireAuth, rateLimit("bosses-global-contribute", 10, 60_000), rejectUnverifiedResult);
 
-    try {
-      const result = await firebaseAdminDb.runTransaction(async (transaction) => {
-        const userRef = firebaseAdminDb.collection("users").doc(identity.uid);
-        const snapshot = await transaction.get(userRef);
-        if (!snapshot.exists) throw new Error("USER_NOT_FOUND");
-        const profile = snapshot.data()!;
-        const completedBosses = Array.isArray(profile.completedBosses)
-          ? profile.completedBosses.filter((value: unknown): value is string => typeof value === "string")
-          : [];
-        if (completedBosses.includes(bossId)) throw new Error("ALREADY_COMPLETED");
-
-        const xp = Math.max(0, Number(profile.xp) || 0) + reward.xp;
-        const coins = Math.max(0, Number(profile.coins) || 0) + reward.coins;
-        const level = Math.floor(xp / 250) + 1;
-        const skillPoints = Math.max(0, Number(profile.skillPoints) || 0) + Math.max(0, level - (Number(profile.level) || 1)) * 5;
-        const nextCompletedBosses = [...completedBosses, bossId];
-        transaction.update(userRef, { xp, coins, level, skillPoints, completedBosses: nextCompletedBosses });
-        return { xp, coins, level, skillPoints, reward };
-      });
-      res.json(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "USER_NOT_FOUND") {
-        res.status(404).json({ error: "User profile was not found" });
-        return;
-      }
-      if (message === "ALREADY_COMPLETED") {
-        res.status(409).json({ error: "Boss reward has already been claimed" });
-        return;
-      }
-      console.error("Solo boss reward transaction failed");
-      res.status(500).json({ error: "Unable to grant boss reward" });
-    }
-  });
-
-  app.post("/api/bosses/global/contribute", requireAuth, rateLimit("global-boss-contribute", 10, 60_000), async (req, res) => {
-    const identity = (req as AuthenticatedRequest).identity;
-    const bossId = readString(req.body?.bossId, 100);
-    if (!identity || !firebaseAdminDb) {
-      res.status(503).json({ error: "Trusted boss service is not configured" });
-      return;
-    }
-    if (!bossId) {
-      res.status(400).json({ error: "bossId is required" });
-      return;
-    }
-
-    try {
-      const result = await firebaseAdminDb.runTransaction(async (transaction) => {
-        const userRef = firebaseAdminDb.collection("users").doc(identity.uid);
-        const bossRef = firebaseAdminDb.collection("active_bosses").doc(bossId);
-        const [userSnapshot, bossSnapshot] = await Promise.all([transaction.get(userRef), transaction.get(bossRef)]);
-        if (!userSnapshot.exists) throw new Error("USER_NOT_FOUND");
-        if (!bossSnapshot.exists) throw new Error("BOSS_NOT_FOUND");
-        const boss = bossSnapshot.data()!;
-        const endsAtMs = boss.endsAt && typeof boss.endsAt.toMillis === "function" ? boss.endsAt.toMillis() : Number(boss.endsAt);
-        const currentHp = Math.max(0, Number(boss.currentHp) || 0);
-        if (boss.active !== true || !Number.isSafeInteger(endsAtMs) || endsAtMs <= Date.now() || currentHp <= 0) {
-          throw new Error("BOSS_INACTIVE");
-        }
-
-        const profile = userSnapshot.data()!;
-        const claims = Array.isArray(profile.globalBossClaims)
-          ? profile.globalBossClaims.filter((value: unknown): value is string => typeof value === "string")
-          : [];
-        const claimId = `${bossId}_${endsAtMs}`;
-        if (claims.includes(claimId)) throw new Error("ALREADY_CONTRIBUTED");
-        const damage = 20;
-        const reward = { xp: 50, coins: 25 };
-        const xp = Math.max(0, Number(profile.xp) || 0) + reward.xp;
-        const coins = Math.max(0, Number(profile.coins) || 0) + reward.coins;
-        const level = Math.floor(xp / 250) + 1;
-        const skillPoints = Math.max(0, Number(profile.skillPoints) || 0) + Math.max(0, level - (Number(profile.level) || 1)) * 5;
-        transaction.update(bossRef, { currentHp: Math.max(0, currentHp - damage) });
-        transaction.update(userRef, {
-          xp,
-          coins,
-          level,
-          skillPoints,
-          globalBossClaims: [...claims, claimId].slice(-1000),
-        });
-        return { damage, currentHp: Math.max(0, currentHp - damage), xp, coins, level, skillPoints, reward };
-      });
-      res.json(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "USER_NOT_FOUND" || message === "BOSS_NOT_FOUND") {
-        res.status(404).json({ error: "Boss or user profile was not found" });
-        return;
-      }
-      if (message === "ALREADY_CONTRIBUTED") {
-        res.status(409).json({ error: "You have already contributed to this boss" });
-        return;
-      }
-      if (message === "BOSS_INACTIVE") {
-        res.status(409).json({ error: "This boss is no longer active" });
-        return;
-      }
-      console.error("Global boss contribution transaction failed");
-      res.status(500).json({ error: "Unable to record contribution" });
-    }
-  });
-
-  app.post("/api/tournaments/complete", requireAuth, rateLimit("tournament-complete", 10, 60_000), async (req, res) => {
-    const identity = (req as AuthenticatedRequest).identity;
-    const tournamentId = readString(req.body?.tournamentId, 50);
-    const reward = tournamentId ? TOURNAMENT_REWARDS.get(tournamentId) : undefined;
-    if (!identity || !firebaseAdminDb) {
-      res.status(503).json({ error: "Trusted tournament service is not configured" });
-      return;
-    }
-    if (!tournamentId || !reward) {
-      res.status(400).json({ error: "Unknown tournament" });
-      return;
-    }
-
-    try {
-      const result = await firebaseAdminDb.runTransaction(async (transaction) => {
-        const userRef = firebaseAdminDb.collection("users").doc(identity.uid);
-        const snapshot = await transaction.get(userRef);
-        if (!snapshot.exists) throw new Error("USER_NOT_FOUND");
-        const profile = snapshot.data()!;
-        const completedTournaments = Array.isArray(profile.completedTournaments)
-          ? profile.completedTournaments.filter((value: unknown): value is string => typeof value === "string")
-          : [];
-        if (completedTournaments.includes(tournamentId)) throw new Error("ALREADY_COMPLETED");
-
-        const xp = Math.max(0, Number(profile.xp) || 0) + reward.xp;
-        const coins = Math.max(0, Number(profile.coins) || 0) + reward.coins;
-        const level = Math.floor(xp / 250) + 1;
-        const skillPoints = Math.max(0, Number(profile.skillPoints) || 0) + Math.max(0, level - (Number(profile.level) || 1)) * 5;
-        transaction.update(userRef, {
-          xp,
-          coins,
-          level,
-          skillPoints,
-          completedTournaments: [...completedTournaments, tournamentId],
-        });
-        return { xp, coins, level, skillPoints, reward };
-      });
-      res.json(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "USER_NOT_FOUND") {
-        res.status(404).json({ error: "User profile was not found" });
-        return;
-      }
-      if (message === "ALREADY_COMPLETED") {
-        res.status(409).json({ error: "Tournament reward has already been claimed" });
-        return;
-      }
-      console.error("Tournament reward transaction failed");
-      res.status(500).json({ error: "Unable to grant tournament reward" });
-    }
-  });
+  app.post("/api/tournaments/complete", requireAuth, rateLimit("tournaments-complete", 10, 60_000), rejectUnverifiedResult);
 
   app.post("/api/rewards/daily", requireAuth, rateLimit("daily-reward", 5, 60_000), async (req, res) => {
     const identity = (req as AuthenticatedRequest).identity;
@@ -1161,41 +735,7 @@ export async function createServerApp() {
     }
   });
 
-  app.post("/api/shop/refresh", requireAuth, rateLimit("shop-refresh", 10, 60_000), async (req, res) => {
-    const identity = (req as AuthenticatedRequest).identity;
-    if (!identity || !firebaseAdminDb) {
-      res.status(503).json({ error: "Trusted shop service is not configured" });
-      return;
-    }
-
-    try {
-      const result = await firebaseAdminDb.runTransaction(async (transaction) => {
-        const userRef = firebaseAdminDb.collection("users").doc(identity.uid);
-        const snapshot = await transaction.get(userRef);
-        if (!snapshot.exists) throw new Error("USER_NOT_FOUND");
-        const profile = snapshot.data()!;
-        const coins = Math.max(0, Number(profile.coins) || 0);
-        const refreshCost = 50;
-        if (coins < refreshCost) throw new Error("INSUFFICIENT_COINS");
-        const nextCoins = coins - refreshCost;
-        transaction.update(userRef, { coins: nextCoins });
-        return { coins: nextCoins, refreshCost };
-      });
-      res.json(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "USER_NOT_FOUND") {
-        res.status(404).json({ error: "User profile was not found" });
-        return;
-      }
-      if (message === "INSUFFICIENT_COINS") {
-        res.status(409).json({ error: "Insufficient coins" });
-        return;
-      }
-      console.error("Shop refresh transaction failed");
-      res.status(500).json({ error: "Unable to refresh shop" });
-    }
-  });
+  app.post("/api/shop/refresh", requireAuth, rateLimit("shop-refresh", 10, 60_000), (_req,res) => { res.status(422).json({error:"Каталог фиксирован. Платное случайное обновление отключено."}); });
 
   app.post("/api/inventory/use", requireAuth, rateLimit("inventory-use", 30, 60_000), async (req, res) => {
     const identity = (req as AuthenticatedRequest).identity;
@@ -2403,17 +1943,17 @@ export async function createServerApp() {
         return;
       }
       const prompt = `
-        Ты — ИИ-Ментор по Python в обучающей игре StudyPy. 
+        Ты — ИИ-Ментор по Python в обучающей игре StudyPy.
         Ученик застрял на задаче: "${challenge}".
         Его текущий код:
         \`\`\`python
         ${code}
         \`\`\`
         ${error ? `Ошибка при выполнении: ${error}` : ''}
-        
-        Дай короткую, вдохновляющую подсказку. СТРОГО ЗАПРЕЩЕНО писать готовый код решения. 
+
+        Дай короткую, вдохновляющую подсказку. СТРОГО ЗАПРЕЩЕНО писать готовый код решения.
         Не давай прямых ответов. Задавай наводящие вопросы и концептуальные подсказки.
-        Используй стиль мудрого, но дружелюбного наставника. 
+        Используй стиль мудрого, но дружелюбного наставника.
         Отвечай на русском языке.
       `;
 
@@ -2502,7 +2042,7 @@ ${history}
       res.json(JSON.parse(response.text()));
     } catch (err) {
       console.error("Gemini Proxy Error:", err);
-      
+
       res.json({
         title: "Сумма четных чисел (Резервная задача)",
         description: "Напишите функцию sum_even(numbers), которая принимает список чисел через пробел и возвращает сумму всех четных чисел.",
@@ -2531,7 +2071,7 @@ ${history}
         5. "reward": { "xp": число, "coins": число }.
         6. "initialCode": Заготовка кода.
         7. "testCases": Минимум 2 теста.
-        
+
         Верни ответ СТРОГО В ВИДЕ JSON-МАССИВА из 10 объектов.
       `;
 
@@ -2544,7 +2084,7 @@ ${history}
       res.json(JSON.parse(text));
     } catch (err) {
       console.error("Global Daily Quests Generation Error:", err);
-      
+
       res.json([
         { title: "Цикличное Эхо", description: "Верните список [1, 2, 3, 4, 5].", difficulty: "easy", recommendedRank: "F", reward: { xp: 50, coins: 25 }, initialCode: "def solve():\\n    pass", testCases: [{ inputValues: [], expectedOutput: "[1, 2, 3, 4, 5]", description: "Test" }], type: "code" },
         { title: "Страж Четности", description: "Функция returns True если число четное.", difficulty: "easy", recommendedRank: "F", reward: { xp: 50, coins: 25 }, initialCode: "def is_even(n):\\n    pass", testCases: [{ inputValues: ["2"], expectedOutput: "True", description: "Even" }], type: "code" },
@@ -2560,7 +2100,7 @@ ${history}
     }
   });
 
-  
+
   return { app, httpServer };
 }
 

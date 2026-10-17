@@ -50,6 +50,7 @@ export const GuildService = {
 
   getAllGuilds: async (): Promise<Guild[]> => {
     const snap = await getDocs(collection(db, 'guilds'));
+    if(snap.metadata.fromCache && snap.empty) throw new Error('Сеть недоступна; каталог не загружен.');
     return snap.docs.map(doc => doc.data() as Guild);
   },
 
@@ -73,8 +74,8 @@ export const GuildService = {
 
   subscribeToGuildChat: (guildId: string, callback: (messages: any[]) => void) => {
     const q = query(
-      collection(db, 'guilds', guildId, 'messages'), 
-      orderBy('timestamp', 'desc'), 
+      collection(db, 'guilds', guildId, 'messages'),
+      orderBy('timestamp', 'desc'),
       limit(50)
     );
     return onSnapshot(q, (snapshot) => {

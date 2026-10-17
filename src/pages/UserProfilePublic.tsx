@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
-import { playSound } from '../utils/sounds';
 import { useAuth } from '../contexts/AuthContext';
 
 interface PublicProfile {
@@ -170,30 +169,31 @@ export const UserProfilePublic = () => {
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-white/40 font-bold uppercase tracking-widest text-[11px]">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-amber-500" />
-                  <span>Level {profile.level}</span>
+                  <span>Игровой уровень: {profile.level}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-teal-500" />
-                  <span>Joined {profile.joinDate?.toDate ? profile.joinDate.toDate().toLocaleDateString() : 'Недавно'}</span>
+                  <span>Дата регистрации: {profile.joinDate?.toDate ? profile.joinDate.toDate().toLocaleDateString() : 'Не указана'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Star className="w-4 h-4 text-brand-primary" />
-                  <span>{snippets.reduce((acc, s) => acc + (s.stars || 0), 0)} Stars earned</span>
+                  <span>{snippets.reduce((acc, s) => acc + (s.stars || 0), 0)} звёзд за публикации</span>
                 </div>
               </div>
               
               <p className="mt-6 text-white/60 max-w-xl text-lg font-medium leading-relaxed">
-                {profile.bio || 'Этот мастер кода предпочитает, чтобы его работы говорили сами за себя. Проверьте его шедевры ниже!'}
+                {profile.bio || 'Описание профиля пока не добавлено.'}
               </p>
             </div>
 
             <div className="flex gap-4">
                {profile.uid !== currentUser?.uid && (
                  <button 
-                   onClick={() => playSound('click')}
-                   className="px-10 py-4 bg-brand-primary text-black font-black rounded-2xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-primary/20"
+                   disabled
+                   title="Соревнования будут доступны после внедрения доверенной проверки кода"
+                   className="px-6 py-3 border border-white/15 text-white/60 rounded-xl cursor-not-allowed"
                  >
-                   Challenge Player
+                   Дуэль недоступна
                  </button>
                )}
             </div>
@@ -206,14 +206,14 @@ export const UserProfilePublic = () => {
             {}
             <div className="glass rounded-[40px] p-8 border border-white/10">
               <h3 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
-                <Zap className="w-6 h-6 text-brand-primary" /> Player Stats
+                <Zap className="w-6 h-6 text-brand-primary" /> Игровые характеристики
               </h3>
               <div className="space-y-6">
                 {[
-                  { label: 'Logic', value: profile.stats.logic, icon: <Brain />, color: 'text-teal-400', bg: 'bg-teal-500/10' },
-                  { label: 'Speed', value: profile.stats.speed, icon: <Zap />, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-                  { label: 'Power', value: profile.stats.power, icon: <Swords />, color: 'text-red-400', bg: 'bg-red-500/10' },
-                  { label: 'Intellect', value: profile.stats.intellect, icon: <Star />, color: 'text-teal-400', bg: 'bg-teal-500/10' }
+                  { label: 'Логика', value: profile.stats.logic, icon: <Brain />, color: 'text-teal-400', bg: 'bg-teal-500/10' },
+                  { label: 'Скорость', value: profile.stats.speed, icon: <Zap />, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+                  { label: 'Сила', value: profile.stats.power, icon: <Swords />, color: 'text-red-400', bg: 'bg-red-500/10' },
+                  { label: 'Интеллект', value: profile.stats.intellect, icon: <Star />, color: 'text-teal-400', bg: 'bg-teal-500/10' }
                 ].map((stat, i) => (
                   <div key={i} className="space-y-2">
                     <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
@@ -241,7 +241,7 @@ export const UserProfilePublic = () => {
                 <div className="flex justify-between items-start mb-8">
                   <div>
                     <h3 className="text-xl font-black uppercase tracking-tighter">{profile.pet.name}</h3>
-                    <p className="text-[11px] font-black text-white/50 uppercase tracking-[0.2em] mt-1">Loyal Companion • LVL {profile.pet.level}</p>
+                    <p className="text-[11px] font-black text-white/50 uppercase tracking-[0.2em] mt-1">Питомец • уровень {profile.pet.level}</p>
                   </div>
                   <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl border border-white/10">
                     {profile.pet.type.startsWith('emoji:') ? profile.pet.type.replace('emoji:', '') : '🤖'}
@@ -268,8 +268,8 @@ export const UserProfilePublic = () => {
           {}
           <div className="lg:col-span-2 space-y-8">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-3xl font-black tracking-tighter uppercase italic">Masterpieces</h3>
-              <div className="text-white/40 text-[11px] font-black uppercase tracking-widest">{snippets.length} Shared Snippets</div>
+              <h3 className="text-3xl font-black tracking-tighter uppercase italic">Опубликованный код</h3>
+              <div className="text-white/40 text-[11px] font-black uppercase tracking-widest">Публикаций: {snippets.length}</div>
             </div>
 
             {snippets.length === 0 ? (
@@ -277,8 +277,8 @@ export const UserProfilePublic = () => {
                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
                    <Code2 className="w-10 h-10 text-white/45" />
                 </div>
-                <h4 className="text-xl font-bold text-white/40 uppercase tracking-widest">No shared code yet</h4>
-                <p className="text-white/50 text-sm mt-2 max-w-xs">Этот кодер пока хранит свои секреты в тайне.</p>
+                <h4 className="text-xl font-bold text-white/40 uppercase tracking-widest">Публикаций пока нет</h4>
+                <p className="text-white/50 text-sm mt-2 max-w-xs">Здесь появится код, которым участник поделится в сообществе.</p>
               </div>
             ) : (
               <div className="grid gap-6">
@@ -316,7 +316,7 @@ export const UserProfilePublic = () => {
 
                     <div className="mt-6 flex justify-end">
                        <div className="flex items-center gap-2 text-[11px] font-black text-brand-primary uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity">
-                         Inspect Code <ExternalLink className="w-3 h-3" />
+                         Открыть код <ExternalLink className="w-3 h-3" />
                        </div>
                     </div>
                   </motion.div>

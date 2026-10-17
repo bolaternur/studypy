@@ -116,7 +116,7 @@ const AchievementCard = ({
         <div className="mt-6 flex items-center gap-5 border-t border-hairline pt-5 text-xs text-ink-30">
           <span className="flex items-center gap-1.5">
             <Zap className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
-            {achievement.reward.xp.toLocaleString('ru-RU')} XP
+            Игровой опыт: {achievement.reward.xp.toLocaleString('ru-RU')}
           </span>
           <span className="flex items-center gap-1.5">
             <Coins className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />
@@ -125,7 +125,7 @@ const AchievementCard = ({
           {achievement.reward.sp !== undefined && (
             <span className="flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-teal-300" aria-hidden="true" />
-              {achievement.reward.sp} SP
+              Очки перков: {achievement.reward.sp}
             </span>
           )}
         </div>
@@ -180,7 +180,7 @@ export const Achievements = () => {
             ) : (
               <div className="mt-7 flex flex-col items-start gap-4">
                 <p className="text-lg text-ink-50">
-                  Войдите в аккаунт, чтобы видеть свой прогресс — сейчас показаны
+                  Войди в аккаунт, чтобы видеть свои достижения — сейчас показаны
                   только условия.
                 </p>
                 <Link

@@ -1,0 +1,87 @@
+async page => {
+  const checks = [];
+  const samples = {};
+  await page.goto('http://127.0.0.1:3000/typing');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const initialOverflow = await page.evaluate(() => document.body.style.overflow);
+  const trigger = page.getByRole('button', { name: 'Открыть меню', exact: true });
+  const menu = page.getByRole('dialog', { name: 'Меню', exact: true });
+  await trigger.click();
+  await menu.waitFor();
+  const trainer = menu.getByRole('link', { name: 'Набор кода Python', exact: true });
+  await trainer.hover();
+  await page.waitForFunction(() => {
+    const element = document.querySelector('#site-menu-dialog a[href="/typing"]');
+    const matrix = getComputedStyle(element).transform;
+    return matrix !== 'none' && Math.abs(Number(matrix.match(/matrix\(([^,]+)/)[1]) - 1.025) < 0.001;
+  });
+  samples.hover = await trainer.evaluate(element => ({ transform: getComputedStyle(element).transform, scale: getComputedStyle(element).scale }));
+  const box = await trainer.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  samples.pressed = await trainer.evaluate(element => ({ transform: getComputedStyle(element).transform, scale: getComputedStyle(element).scale }));
+  if (Math.abs(Number(samples.pressed.scale) - .98) > .001) throw new Error('Pointer-down scale is wrong: ' + JSON.stringify(samples.pressed));
+  await page.mouse.move(1,1);
+  await page.mouse.up();
+  checks.push('Desktop menu hover transform 1.025 and pointer-down scale .98');
+  await page.keyboard.press('Escape');
+  await menu.waitFor({ state: 'detached' });
+  if (await page.evaluate(() => document.body.style.overflow) !== initialOverflow) throw new Error('Body stayed locked after Escape');
+  if (!(await trigger.evaluate(element => element === document.activeElement))) throw new Error('Menu failed to restore focus');
+  for (let index = 0; index < 3; index++) {
+    await trigger.click(); await menu.waitFor();
+    await page.keyboard.press('Escape'); await menu.waitFor({ state: 'detached' });
+    if (await page.evaluate(() => document.body.style.overflow) !== initialOverflow) throw new Error('Body stayed locked after repeat ' + index);
+  }
+  checks.push('Escape restores focus and scroll; 3 reopen cycles leave no hidden body');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await trigger.click(); await menu.waitFor(); await trainer.hover();
+  samples.reduced = await trainer.evaluate(element => ({ transform: getComputedStyle(element).transform, scale: getComputedStyle(element).scale }));
+  if (samples.reduced.transform !== 'none' || !['1','none'].includes(samples.reduced.scale)) throw new Error('Reduced motion still transforms hover: ' + JSON.stringify(samples.reduced));
+  const reducedBox = await trainer.boundingBox();
+  await page.mouse.move(reducedBox.x + reducedBox.width / 2, reducedBox.y + reducedBox.height / 2);
+  await page.mouse.down();
+  const reducedPress = await trainer.evaluate(element => getComputedStyle(element).scale);
+  if (!['1','none'].includes(reducedPress)) throw new Error('Reduced motion still scales on press: ' + reducedPress);
+  await page.mouse.move(1,1); await page.mouse.up();
+  await page.keyboard.press('Escape'); await menu.waitFor({ state: 'detached' });
+  checks.push('Reduced motion removes menu hover and pressed movement');
+  for (const width of [360,390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await trigger.click(); await menu.waitFor();
+    const dimensions = await page.evaluate(() => ({ viewport:innerWidth, document:document.documentElement.scrollWidth, panel:document.querySelector('#site-menu-dialog').getBoundingClientRect().toJSON() }));
+    if (dimensions.document > width || dimensions.panel.x < 0 || dimensions.panel.right > width) throw new Error('Mobile menu overflow: ' + JSON.stringify(dimensions));
+    await page.keyboard.press('Escape'); await menu.waitFor({ state: 'detached' });
+  }
+  checks.push('Menu fits 360 and 390 px; Escape unlocks each mobile dialog');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await trigger.click(); await menu.waitFor();
+  const slider = menu.getByRole('slider', { name:/Громкость/ });
+  await slider.focus();
+  await slider.press('Home');
+  await menu.getByRole('button', { name:/^(Включить и проверить|Проверить звук)$/ }).click();
+  await menu.getByRole('status').filter({hasText:'Громкость — 0%'}).waitFor();
+  await slider.focus();
+  for (let step=0; step<12; step++) await slider.press('ArrowRight');
+  if (await slider.inputValue() !== '60') throw new Error('Sound volume not keyboard adjustable');
+  await menu.getByRole('button', { name:'Проверить звук',exact:true }).click();
+  await menu.getByRole('status').filter({hasText:'Проверочный звук воспроизведён'}).waitFor();
+  await page.screenshot({path:'test-results/menu-sound-390.png',fullPage:true});
+  await page.keyboard.press('Escape'); await menu.waitFor({ state:'detached' });
+  await page.reload();
+  await page.getByRole('heading',{name:'Набор кода Python',exact:true}).waitFor();
+  await trigger.click(); await menu.waitFor();
+  if(await slider.inputValue() !== '60') throw new Error('Sound volume was lost on reload');
+  const toggle=menu.getByRole('button',{name:'Выключить звук',exact:true});
+  if(await toggle.getAttribute('aria-pressed')!=='true') throw new Error('Sound opt-in not saved');
+  await toggle.click();
+  await menu.getByRole('status').filter({hasText:'Звук выключен'}).waitFor();
+  await menu.getByRole('button',{name:'Включить и проверить',exact:true}).click();
+  await menu.getByRole('status').filter({hasText:'Проверочный звук воспроизведён'}).waitFor();
+  checks.push('Sound UI: zero-volume explanation, keyboard 60%, real gesture preview, persistence, explicit mute/unmute');
+  await page.keyboard.press('Escape'); await menu.waitFor({ state:'detached' });
+  if(await page.evaluate(()=>document.body.style.overflow)!==initialOverflow) throw new Error('Sound menu left scroll locked');
+  return { checks, count:checks.length, samples };
+}

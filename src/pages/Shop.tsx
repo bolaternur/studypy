@@ -14,12 +14,12 @@ import { ALL_ITEMS, SHOP_ITEMS, type ShopItem } from '../constants/items';
 export { ALL_ITEMS } from '../constants/items';
 
 export function Shop() {
-  const { userProfile, buyItem, payShopRefresh, quickSellItem, listMarketplaceItem, buyMarketplaceItem, getMarketplaceListings, updateQuestProgress } = useAuth();
+  const { userProfile, buyItem, quickSellItem, listMarketplaceItem, buyMarketplaceItem, getMarketplaceListings, updateQuestProgress } = useAuth();
   const [activeTab, setActiveTab] = useState<'shop' | 'marketplace' | 'inventory'>('shop');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
-  const [items, setItems] = useState<ShopItem[]>(SHOP_ITEMS);
-  const [refreshCount, setRefreshCount] = useState(0);
+  const items = SHOP_ITEMS;
+
   const [marketplaceListings, setMarketplaceListings] = useState<any[]>([]);
   const [isListing, setIsListing] = useState(false);
   const [listPrice, setListPrice] = useState(100);
@@ -37,26 +37,26 @@ export function Shop() {
   };
 
   const handleBuy = async (item: ShopItem) => {
-    if (processingId) return;
+    if (processingId || item.id !== "xp_boost_1") return;
     if (!userProfile) {
       playSound('error');
-      setMessage({ text: 'Только зарегистрированные пользователи могут совершать покупки.', type: 'error' });
+      setMessage({ text: 'Войди в аккаунт, чтобы купить игровой предмет.', type: 'error' });
       setTimeout(() => setMessage(null), 3000);
       return;
     }
 
     setProcessingId(item.id);
     playSound('click');
-    
+
     try {
       const success = await buyItem(item.id, item.price);
-      
+
       if (success) {
         updateQuestProgress('buy_item');
         updateQuestProgress('spend', item.price);
         setMessage({ text: `Вы успешно купили ${item.name}!`, type: 'success' });
       } else {
-        setMessage({ text: 'Недостаточно монет или предмет уже куплен.', type: 'error' });
+        setMessage({ text: 'Не удалось купить предмет. Проверь баланс или попробуй позже.', type: 'error' });
       }
     } finally {
       setProcessingId(null);
@@ -101,7 +101,7 @@ export function Shop() {
   const handleBuyMarketplace = async (listing: any) => {
     if (processingId) return;
     if (listing.sellerId === userProfile?.uid) {
-      setMessage({ text: 'Вы не можете купить свой собственный предмет!', type: 'error' });
+      setMessage({ text: 'Свой предмет купить нельзя.', type: 'error' });
       return;
     }
     setProcessingId(listing.id);
@@ -121,39 +121,6 @@ export function Shop() {
     }
   };
 
-  const handleRefresh = async () => {
-    if (processingId) return;
-    if (!userProfile) {
-      playSound('error');
-      setMessage({ text: 'Только зарегистрированные пользователи могут обновлять магазин.', type: 'error' });
-      setTimeout(() => setMessage(null), 3000);
-      return;
-    }
-
-    const cost = refreshCount === 0 ? 0 : 50;
-    if (refreshCount > 0 && (userProfile?.coins || 0) < cost) {
-      setMessage({ text: 'Недостаточно монет для обновления.', type: 'error' });
-      return;
-    }
-    
-    setProcessingId('refresh');
-    try {
-      if (refreshCount > 0) {
-        const paid = await payShopRefresh();
-        if (!paid) return;
-      }
-      
-      playSound('click');
-      const shuffled = [...ALL_ITEMS].sort(() => 0.5 - Math.random());
-      setItems(shuffled.slice(0, 4));
-      setRefreshCount(prev => prev + 1);
-      setMessage({ text: refreshCount === 0 ? 'Магазин обновлен бесплатно!' : 'Магазин обновлен за 50 монет!', type: 'success' });
-    } finally {
-      setProcessingId(null);
-      setTimeout(() => setMessage(null), 3000);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-transparent pt-32 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
@@ -166,14 +133,14 @@ export function Shop() {
             <ShoppingBag className="w-4 h-4" />
             <span className="text-sm font-medium uppercase tracking-wider">Экономика StudyPy</span>
           </motion.div>
-          
+
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight"
           >
-            <TextReveal text="Торговля и" delay={0.1} /> <span className="text-amber-500 italic serif"><TextReveal text="арсенал" delay={0.3} /></span>
+            <TextReveal text="Магазин" delay={0.1} /> <span className="text-amber-500 italic serif"><TextReveal text="игровых предметов" delay={0.3} /></span>
           </motion.h1>
 
           <motion.div
@@ -218,8 +185,8 @@ export function Shop() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               className={`fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl border flex items-center gap-3 shadow-2xl backdrop-blur-xl ${
-                message.type === 'success' 
-                  ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' 
+                message.type === 'success'
+                  ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
                   : 'bg-red-500/20 border-red-500/30 text-red-400'
               }`}
             >
@@ -241,16 +208,9 @@ export function Shop() {
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                   <ShoppingBag className="w-6 h-6 text-amber-500" />
-                  <TextReveal text="Предметы недели" delay={0.1} />
+                  <TextReveal text="Каталог" delay={0.1} />
                 </h2>
-                <button
-                  onClick={handleRefresh}
-                  disabled={!!processingId}
-                  className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-sm font-bold transition-all disabled:opacity-50 flex items-center gap-2"
-                >
-                  {processingId === 'refresh' && <div className="w-4 h-4 border-2 border-white/40 border-t-white bg-transparent rounded-full animate-spin" />}
-                  {refreshCount === 0 ? 'Бесплатное обновление' : 'Обновить (50 монет)'}
-                </button>
+
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {items.map((item, index) => {
@@ -277,7 +237,7 @@ export function Shop() {
                         </div>
                         <button
                           onClick={() => handleBuy(item)}
-                          disabled={isOwned || !canAfford || !!processingId}
+                          disabled={item.id !== 'xp_boost_1' || isOwned || !canAfford || !!processingId}
                           className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center min-w-[100px] ${
                             isOwned ? 'bg-white/5 text-white/55' : !canAfford ? 'bg-red-500/10 text-red-500/50' : 'bg-white text-black hover:bg-amber-500 disabled:opacity-50'
                           }`}
@@ -285,7 +245,7 @@ export function Shop() {
                           {processingId === item.id ? (
                             <div className="w-4 h-4 border-2 border-black/20 border-t-black bg-transparent rounded-full animate-spin" />
                           ) : (
-                            isOwned ? 'Куплено' : 'Купить'
+                            item.id !== 'xp_boost_1' ? 'Пока недоступно' : isOwned ? 'Куплено' : 'Купить'
                           )}
                         </button>
                       </div>
@@ -310,11 +270,11 @@ export function Shop() {
                   Обновить список
                 </button>
               </div>
-              
+
               {marketplaceListings.length === 0 ? (
                 <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
                   <Tag className="w-12 h-12 text-white/45 mx-auto mb-4" />
-                  <p className="text-white/40">На рынке пока пусто. Будьте первым, кто выставит товар!</p>
+                  <p className="text-white/40">На рынке пока нет предложений.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -364,13 +324,13 @@ export function Shop() {
             <div className="space-y-12">
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                 <ShoppingBag className="w-6 h-6 text-amber-500" />
-                <TextReveal text="Ваш инвентарь" delay={0.1} />
+                <TextReveal text="Твой инвентарь" delay={0.1} />
               </h2>
-              
+
               {!userProfile?.inventory || userProfile.inventory.length === 0 ? (
                 <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
                   <ShoppingBag className="w-12 h-12 text-white/45 mx-auto mb-4" />
-                  <p className="text-white/40">Ваш инвентарь пуст. Время что-нибудь купить!</p>
+                  <p className="text-white/40">В инвентаре пока нет предметов.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -431,8 +391,8 @@ export function Shop() {
                 <h3 className="text-2xl font-bold text-white mb-2">
                   <TextReveal text="Выставить на рынок" delay={0.1} />
                 </h3>
-                <p className="text-white/40 mb-6">Укажите цену для {selectedItemToList?.replace(/_/g, ' ').toUpperCase()}</p>
-                
+                <p className="text-white/40 mb-6">Укажи цену для {selectedItemToList?.replace(/_/g, ' ').toUpperCase()}</p>
+
                 <div className="space-y-4 mb-8">
                   <div className="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/10">
                     <Coins className="w-6 h-6 text-amber-500" />
@@ -443,7 +403,7 @@ export function Shop() {
                       className="bg-transparent text-white text-2xl font-bold outline-none w-full"
                     />
                   </div>
-                  <p className="text-xs text-white/50 italic">Примечание: Предмет будет удален из вашего инвентаря и станет доступен другим игрокам.</p>
+                  <p className="text-xs text-white/50 italic">После подтверждения предмет переместится из твоего инвентаря на рынок.</p>
                 </div>
 
                 <div className="flex gap-4">
@@ -477,7 +437,7 @@ export function Shop() {
           className="mt-16 p-8 rounded-3xl bg-gradient-to-br from-amber-500/5 to-amber-500/5 border border-white/5 text-center"
         >
           <p className="text-white/40 text-sm">
-            Торгуйте с умом! Цены на рынке устанавливаются игроками.
+            Цены на рынке устанавливают игроки.
           </p>
         </motion.div>
       </div>

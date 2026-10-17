@@ -1,724 +1,212 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Editor from '@monaco-editor/react';
-import { Play, CheckCircle, XCircle, Loader2, Bug, Eye, Sparkles, Clock } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Editor, { loader } from '@monaco-editor/react';
+import { CheckCircle, Eye, Loader2, Play, Square, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { TestCase } from '../constants/lessons';
 import { CodeVisualizer } from './CodeVisualizer';
-import { GUARD_LINE_OFFSET, PYTHON_GUARD_SETUP, guarded } from '../constants/python-guard';
-import { playSound } from '../utils/sounds';
+import { startPythonRun, type PythonRunResult, type PythonTest } from '../runtime/python';
+import { readDraft, writeDraft } from '../runtime/drafts';
 
-function debounce(fn: Function, ms: number) {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return function(this: any, ...args: any[]) {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(this, args), ms);
-  };
-}
-
-let pyodideLoadPromise: Promise<any> | null = null;
-
-const loadPyodideRuntime = (): Promise<any> => {
-  const win = window as any;
-  if (win.pyodide) return Promise.resolve(win.pyodide);
-  if (pyodideLoadPromise) return pyodideLoadPromise;
-
-  pyodideLoadPromise = new Promise((resolve, reject) => {
-    const initialize = async () => {
-      try {
-        const py = await win.loadPyodide({
-          indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/',
-        });
-        win.pyodide = py;
-        resolve(py);
-      } catch (error) {
-        pyodideLoadPromise = null;
-        reject(error);
-      }
-    };
-
-    if (win.loadPyodide) {
-      void initialize();
-      return;
-    }
-
-    const existingScript = document.querySelector<HTMLScriptElement>('script[data-pyodide-runtime]');
-    const script = existingScript || document.createElement('script');
-    if (!existingScript) {
-      script.dataset.pyodideRuntime = 'true';
-      script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
-      document.body.appendChild(script);
-    }
-    script.addEventListener('load', () => { void initialize(); }, { once: true });
-    script.addEventListener('error', () => {
-      pyodideLoadPromise = null;
-      reject(new Error('Не удалось загрузить среду Python. Проверьте подключение к интернету.'));
-    }, { once: true });
-  });
-
-  return pyodideLoadPromise;
-};
-
-/**
- * Turns a failed run into one line a learner can act on.
- *
- * `traceback` is what the Python-side guard recorded at raise time; its
- * last non-empty line is the exception type and message, which is the part
- * that matters. Frame lines are mined for a line number, since learner code
- * executes under the name "<exec>".
- *
- * Pyodide's own error object is close to useless here — in 0.26 its
- * `message` is empty — so it only supplies the exception class as a
- * last resort.
- */
-const describePythonError = (error: unknown, traceback?: string | null): string => {
-  const text = (traceback ?? '').trim();
-
-  if (text) {
-    const lines = text.split('\n').filter((line) => line.trim().length > 0);
-    const summary = lines[lines.length - 1];
-
-    // `<string>` frames come from exec()-ing the learner's source directly, so
-    // their numbering is already theirs and they always win. `<exec>` frames
-    // belong to the generated wrapper and are only a fallback — the watchdog
-    // itself raises from one, which would otherwise report its own line
-    // instead of the loop the learner wrote.
-    const direct: number[] = [];
-    const wrapped: number[] = [];
-    for (const line of lines) {
-      const fromString = /File "<string>", line (\d+)/.exec(line);
-      if (fromString) {
-        direct.push(Number(fromString[1]));
-        continue;
-      }
-      const fromExec = /File "<exec>", line (\d+)/.exec(line);
-      if (fromExec) wrapped.push(Number(fromExec[1]) - GUARD_LINE_OFFSET);
-    }
-
-    const candidate = direct.length > 0
-      ? direct[direct.length - 1]
-      : wrapped.filter((value) => value > 0).pop() ?? null;
-    const lineNumber = candidate && candidate > 0 ? candidate : null;
-
-    if (summary) {
-      return lineNumber ? `${summary} (строка ${lineNumber})` : summary;
-    }
-  }
-
-  const pythonType = (error as { type?: unknown } | null)?.type;
-  if (typeof pythonType === 'string' && pythonType) return pythonType;
-
-  return error instanceof Error && error.message ? error.message : 'Ошибка выполнения';
-};
-
-/** Reads the traceback the guard recorded, if the runtime is still usable. */
-const readRecordedTraceback = async (pyodide: any): Promise<string | null> => {
-  try {
-    const value = await pyodide.runPythonAsync('_sp_last_error');
-    return typeof value === 'string' ? value : null;
-  } catch {
-    return null;
-  }
-};
-
-interface CodeEditorProps {
+export interface CodeEditorProps {
   initialCode: string;
-  testCases?: (TestCase & { inputValues?: string[] })[];
+  testCases?: PythonTest[];
   onSuccess?: () => void;
   onFailure?: () => void;
+  onError?: (message: string) => void;
   onChange?: (code: string) => void;
+  onCodeChange?: (code: string) => void;
   hideControls?: boolean;
   readOnly?: boolean;
   lessonId?: string;
+  draftKey?: string;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({ 
-  initialCode, 
-  testCases = [], 
-  onSuccess, 
-  onFailure,
-  onChange,
-  hideControls = false,
-  readOnly = false,
-  lessonId: propLessonId
+export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
+  initialCode, testCases = [], onSuccess, onFailure, onError, onChange, onCodeChange,
+  hideControls = false, readOnly = false, lessonId, draftKey,
 }) => {
-  const [code, setCode] = useState(initialCode);
-  const [output, setOutput] = useState<string>('');
-  const [isRunning, setIsRunning] = useState(false);
-  const [pyodide, setPyodide] = useState<any>(null);
-  const [runtimeError, setRuntimeError] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<{ passed: boolean; message: string }[] | null>(null);
+  const fallbackKey = useRef(lessonId ? `${lessonId}:${initialCode.slice(0, 80)}:${testCases[0]?.description ?? ''}` : undefined);
+  const storageKey = readOnly ? undefined : draftKey ?? fallbackKey.current;
+  const [code, setCode] = useState(() => readDraft(storageKey, initialCode));
+  const [stdin, setStdin] = useState('');
+  const [result, setResult] = useState<PythonRunResult | null>(null);
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'running'>('idle');
+  const [activeTab, setActiveTab] = useState<'output' | 'tests' | 'history'>('output');
   const [isVisualizerOpen, setIsVisualizerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'console' | 'tests' | 'history'>('console');
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-  
-  const [terminalLines, setTerminalLines] = useState<{ type: 'output' | 'input'; text: string }[]>([]);
-  const [inputHistory, setInputHistory] = useState<string[]>([]);
-  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
-  const [inputDraft, setInputDraft] = useState<string>('');
-  const terminalEndRef = useRef<HTMLDivElement>(null);
-  const inputDraftRef = useRef<HTMLInputElement>(null);
-  const editorRef = useRef<any>(null);
-
-  const handleEditorDidMount = React.useCallback((editor: any) => {
-    editorRef.current = editor;
-    
-    setTimeout(() => editor.focus(), 100);
-  }, []);
-
-  
-  useEffect(() => {
-    if (initialCode !== code && initialCode !== undefined) {
-      setCode(initialCode);
-      setTestResults(null);
-      setOutput('');
-    }
-  }, [initialCode]);
-
-  const lastOnChangeRef = useRef(onChange);
-  useEffect(() => { lastOnChangeRef.current = onChange; }, [onChange]);
-
-  const debouncedOnChange = useRef(
-    debounce((val: string) => {
-      if (lastOnChangeRef.current) lastOnChangeRef.current(val);
-    }, 500)
-  ).current;
-
-  const handleCodeChange = React.useCallback((val: string | undefined) => {
-    const newCode = val || '';
-    setCode(newCode);
-    debouncedOnChange(newCode);
-  }, [debouncedOnChange]);
-
-  
-  useEffect(() => { terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [terminalLines, pendingPrompt]);
-  
-  useEffect(() => { if (pendingPrompt !== null) inputDraftRef.current?.focus(); }, [pendingPrompt]);
-
-  
+  const [plainEditor, setPlainEditor] = useState(false);
+  const [storageError, setStorageError] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const { currentUser, setLastCodeResult, saveSubmission, getSubmissions } = useAuth();
+  const runRef = useRef<ReturnType<typeof startPythonRun> | null>(null);
+  const identityRef = useRef(storageKey);
+  const initialRef = useRef(initialCode);
   const codeRef = useRef(code);
-  useEffect(() => { codeRef.current = code; }, [code]);
-  const inputHistoryRef = useRef(inputHistory);
-  useEffect(() => { inputHistoryRef.current = inputHistory; }, [inputHistory]);
-  const pendingPromptRef = useRef(pendingPrompt);
-  useEffect(() => { pendingPromptRef.current = pendingPrompt; }, [pendingPrompt]);
+  const aliveRef = useRef(true);
+  const isRunning = phase !== 'idle';
 
-  
-  const runSandboxCodeRef = useRef<((inputs: string[]) => Promise<void>) | undefined>(undefined);
-
-  const runSandboxCode = async (inputs: string[]) => {
-    if (!pyodide) return;
-    const inputJson = JSON.stringify(inputs);
-    
-    const userCode = codeRef.current;
-    const encodedCode = btoa(unescape(encodeURIComponent(userCode)));
-    try {
-      await pyodide.runPythonAsync(`
-import sys, io, builtins, base64
-
-_pending_prompt = None
-_pending_output = None
-
-class _NeedsInput(Exception):
-    pass
-
-class _MockInput:
-    def __init__(self, inputs):
-        self.inputs = list(inputs)
-        self.idx = 0
-    def __call__(self, prompt=""):
-        global _pending_prompt, _pending_output
-        if self.idx < len(self.inputs):
-            val = self.inputs[self.idx]
-            self.idx += 1
-            sys.stdout.write(str(prompt) + str(val) + "\\n")
-            return val
-        _pending_prompt = str(prompt)
-        _pending_output = sys.stdout.getvalue()
-        raise _NeedsInput()
-
-${PYTHON_GUARD_SETUP}
-
-sys.stdout = _SpBoundedOut()
-sys.stderr = _SpBoundedOut()
-builtins.input = _MockInput(${inputJson})
-
-_user_code = base64.b64decode("${encodedCode}").decode("utf-8")
-${guarded('exec(_user_code, {"__name__": "__main__", "__builtins__": builtins})')}
-`);
-      const finalOut: string = await pyodide.runPythonAsync('sys.stdout.getvalue()');
-      const lines = finalOut.trimEnd().split('\n');
-      setTerminalLines(lines.map(t => ({ type: 'output' as const, text: t })));
-      setPendingPrompt(null);
-      setIsRunning(false);
-      if (onSuccess) onSuccess();
-    } catch (runtimeError: unknown) {
-      
-      let pr: string | null = null;
-      let out = '';
-      try {
-        const hasInput = await pyodide.runPythonAsync('_pending_prompt is not None') as boolean;
-        if (hasInput) {
-          pr = await pyodide.runPythonAsync('str(_pending_prompt)') as string;
-          out = await pyodide.runPythonAsync('str(_pending_output)') as string;
-        }
-      } catch {  }
-
-      if (pr !== null) {
-        const lines = out.trimEnd().split('\n');
-        setTerminalLines(lines.map(t => ({ type: 'output' as const, text: t })));
-        setPendingPrompt(pr);
-        setIsRunning(false);
-      } else {
-        
-        // Pyodide attaches the formatted Python traceback to the error it
-        // throws. Reading it there works; asking Python afterwards does not,
-        // because the exception is no longer active by then.
-        const errLine = describePythonError(runtimeError, await readRecordedTraceback(pyodide));
-        setTerminalLines(prev => [...prev, { type: 'output', text: '' }, { type: 'output', text: '❌ ' + errLine }]);
-        setPendingPrompt(null);
-        setIsRunning(false);
-      }
-    }
-  };
-  runSandboxCodeRef.current = runSandboxCode;
-
-  const submitTerminalInput = React.useCallback(async (answer: string) => {
-    if (pendingPromptRef.current === null) return;
-    const newLines = [{ type: 'input' as const, text: (pendingPromptRef.current || '') + answer }];
-    const newHist = [...inputHistoryRef.current, answer];
-    setInputDraft('');
-    setInputHistory(newHist);
-    setTerminalLines(prev => [...prev, ...newLines]);
-    setPendingPrompt(null);
-    setIsRunning(true);
-    await runSandboxCodeRef.current!(newHist);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => { aliveRef.current = false; runRef.current?.cancel(); runRef.current = null; };
   }, []);
 
-  const { setLastCodeResult, saveSubmission, getSubmissions } = useAuth();
-
   useEffect(() => {
-    if (activeTab === 'history') {
-      loadHistory();
+    if (identityRef.current !== storageKey) {
+      runRef.current?.cancel();
+      runRef.current = null;
+      const restored = readDraft(storageKey, initialCode);
+      codeRef.current = restored;
+      setCode(restored);
+      setResult(null);
+      setPhase('idle');
+    } else if (initialRef.current !== initialCode && initialCode !== codeRef.current) {
+      codeRef.current = initialCode;
+      setCode(initialCode);
+      writeDraft(storageKey, initialCode);
+      setResult(null);
     }
-  }, [activeTab, propLessonId, (testCases[0] as any)?.id]);
-
-  const loadHistory = React.useCallback(async () => {
-    const lessonId = propLessonId || (testCases[0] as any)?.id || 'sandbox';
-    setIsHistoryLoading(true);
-    const history = await getSubmissions(lessonId);
-    setSubmissions(history);
-    setIsHistoryLoading(false);
-  }, [propLessonId, testCases, getSubmissions]);
+    identityRef.current = storageKey;
+    initialRef.current = initialCode;
+  }, [storageKey, initialCode]);
 
   useEffect(() => {
+    let mounted = true;
+    const timer = setTimeout(() => { if (mounted) setPlainEditor(true); }, 12000);
+    void loader.init().then(() => clearTimeout(timer)).catch(() => {
+      if (mounted) setPlainEditor(true);
+    });
+    return () => { mounted = false; clearTimeout(timer); };
+  }, []);
+
+  const handleCodeChange = useCallback((value: string | undefined) => {
+    const next = value ?? '';
+    codeRef.current = next;
+    setCode(next);
+    if (!writeDraft(storageKey, next)) setStorageError('Не удалось сохранить черновик на устройстве. Скопируй код перед выходом.');
+    onChange?.(next);
+    onCodeChange?.(next);
+  }, [storageKey, onChange, onCodeChange]);
+
+  useEffect(() => {
+    if (activeTab !== 'history') return;
     let active = true;
-    void loadPyodideRuntime()
-      .then((py) => { if (active) setPyodide(py); })
-      .catch((error: unknown) => {
-        if (active) setRuntimeError(error instanceof Error ? error.message : 'Не удалось загрузить среду Python.');
-      });
+    setHistoryLoading(true);
+    void getSubmissions(lessonId ?? 'sandbox').then((items) => {
+      if (active) setHistory(items);
+    }).catch(() => {
+      if (active) setStorageError('История аккаунта сейчас недоступна. Черновик остаётся на устройстве.');
+    }).finally(() => { if (active) setHistoryLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [activeTab, lessonId, getSubmissions]);
 
-  const runTests = React.useCallback(async () => {
-    if (!pyodide) return;
-    setIsRunning(true);
-    setTestResults(null);
-    setOutput('');
-
-    const results: { passed: boolean; message: string }[] = [];
-    let allPassed = true;
-
-    
-    if (testCases.length === 0) {
-      setTerminalLines([]);
-      setInputHistory([]);
-      setPendingPrompt(null);
-      setInputDraft('');
-      setActiveTab('console');
-      await runSandboxCode([]);
-      setIsRunning(false);
+  const runCode = async () => {
+    if (runRef.current) return;
+    setResult(null);
+    setPhase('loading');
+    setActiveTab(testCases.length ? 'tests' : 'output');
+    const submittedCode = codeRef.current;
+    const run = startPythonRun({
+      code: submittedCode, tests: testCases,
+      stdin: stdin === '' ? [] : stdin.replace(/\r/g, '').split('\n'),
+      onStatus: (next) => { if (aliveRef.current) setPhase(next); },
+    });
+    runRef.current = run;
+    const next = await run.promise;
+    if (!aliveRef.current || runRef.current !== run) return;
+    runRef.current = null;
+    setPhase('idle');
+    setResult(next);
+    const passed = next.status === 'completed' && next.passed;
+    setLastCodeResult({ success: passed, message: passed ? (testCases.length ? 'Программа прошла проверку.' : 'Программа завершена.') : next.error ?? 'Проверь результат и исправь код.', timestamp: Date.now() });
+    if (next.status === 'cancelled' || next.status === 'timeout') {
+      setActiveTab('output');
+      onError?.(next.error ?? 'Выполнение остановлено.');
       return;
     }
-
-    
-    try {
-      for (let i = 0; i < testCases.length; i++) {
-        const test = testCases[i];
-        try {
-          // Tests must not share variables, mocked input, or stdout with a
-          // previous test run; otherwise a passing result can be accidental.
-          await pyodide.runPythonAsync('globals().clear()');
-          
-          const inputValuesList = test.inputValues ? JSON.stringify(test.inputValues) : '[]';
-          // The guards are (re)defined here because globals().clear() above
-          // wipes them along with everything else from the previous case.
-          await pyodide.runPythonAsync(`
-import sys
-import io
-import builtins
-
-${PYTHON_GUARD_SETUP}
-
-sys.stdout = _SpBoundedOut()
-sys.stderr = _SpBoundedOut()
-
-class MockInput:
-    def __init__(self, inputs):
-        self.inputs = inputs
-        self.index = 0
-    def __call__(self, prompt=""):
-        if self.index < len(self.inputs):
-            val = self.inputs[self.index]
-            self.index += 1
-            # Do NOT print prompt to sys.stdout to prevent failing expectedOutput matches
-            return val
-        return ""
-
-builtins.input = MockInput(${inputValuesList})
-          `);
-
-          
-          // Learner code and any assertions run under the watchdog: a test
-          // case containing an infinite loop must fail, not hang the tab.
-          await pyodide.runPythonAsync(guarded(code));
-
-          if ((test as any).input) {
-             await pyodide.runPythonAsync(guarded((test as any).input));
-          }
-
-          if (test.assertCode) {
-             await pyodide.runPythonAsync(guarded(test.assertCode));
-          }
-          
-          
-          const actualOutput = await pyodide.runPythonAsync("sys.stdout.getvalue().strip()");
-          
-          let passed = true;
-          let msg = `Тест ${i + 1} пройден: ${test.description || 'Успешно'}`;
-          
-          if (test.expectedOutput !== undefined && test.expectedOutput !== null) {
-              passed = actualOutput === test.expectedOutput.trim();
-              if (!passed) {
-                  msg = `Тест ${i + 1} провален: ${test.description || ''}. Ожидалось '${test.expectedOutput}', получено '${actualOutput}'`;
-              }
-          }
-
-          results.push({ passed, message: msg });
-          if (!passed) allPassed = false;
-        } catch (err: any) {
-          allPassed = false;
-          results.push({ passed: false, message: `Ошибка в тесте ${i + 1}: ${err.message}` });
-        }
-      }
-      
-      setOutput(await pyodide.runPythonAsync("sys.stdout.getvalue()"));
-      setTestResults(results);
-      
-      const lessonId = propLessonId || (testCases[0] as any)?.id || 'sandbox';
-      await saveSubmission(lessonId, code, results);
-
-      setLastCodeResult({
-        success: allPassed,
-        message: allPassed ? 'Отличная работа! Все тесты пройдены.' : 'Есть ошибки в коде. Попробуй еще раз!',
-        timestamp: Date.now()
+    if (testCases.length && next.tests.length && currentUser) {
+      void saveSubmission(lessonId ?? 'sandbox', submittedCode, next.tests).catch(() => {
+        if (aliveRef.current) setStorageError('Не удалось сохранить попытку в аккаунте. Код остаётся на устройстве.');
       });
-
-      if (allPassed) {
-        if (onSuccess) onSuccess();
-      } else {
-        if (onFailure) onFailure();
-      }
-      
-    } catch (err: any) {
-      allPassed = false;
-      
-      
-      const errMsg = `Ошибка: ${describePythonError(err, await readRecordedTraceback(pyodide))}`;
-      results.push({ passed: false, message: errMsg });
-      setTestResults(results);
-      
-      const lessonId = propLessonId || (testCases[0] as any)?.id || 'sandbox';
-      await saveSubmission(lessonId, code, results);
-
-      setLastCodeResult({
-        success: false,
-        message: 'Ошибка при выполнении кода!',
-        timestamp: Date.now()
-      });
-      if (onFailure) onFailure();
-    } finally {
-      setIsRunning(false);
     }
-  }, [pyodide, testCases, code, propLessonId, saveSubmission, setLastCodeResult, onSuccess, onFailure]);
+    if (passed) onSuccess?.();
+    else { onFailure?.(); if (next.error) onError?.(next.error); }
+  };
 
-  if (hideControls) {
-    return (
-      <div className="rounded-xl overflow-hidden border border-gray-700 shadow-2xl">
-        <Editor
-          height="300px"
-          defaultLanguage="python"
-          theme="vs-dark"
-          value={code}
-          onChange={handleCodeChange}
-          options={{
-            minimap: { enabled: false },
-            fontSize: 14,
-            fontFamily: 'JetBrains Mono, monospace',
-            padding: { top: 16, bottom: 16 },
-            scrollBeyondLastLine: false,
-            readOnly: readOnly
-          }}
-        />
-      </div>
-    );
-  }
+  const editor = plainEditor ? (
+    <textarea aria-label="Код Python" value={code} readOnly={readOnly}
+      onChange={(event) => handleCodeChange(event.target.value)} spellCheck={false}
+      className="w-full h-full min-h-[200px] resize-y bg-[#12191d] text-gray-100 p-4 font-mono text-sm leading-6 outline-offset-[-3px]" />
+  ) : (
+    <Editor height="100%" defaultLanguage="python" theme="vs-dark" value={code} onChange={handleCodeChange}
+      loading={<div className="p-4 text-sm text-gray-300">Загрузка редактора… <button type="button" className="underline ml-2 min-h-11" onClick={() => setPlainEditor(true)}>Открыть простой редактор</button></div>}
+      options={{ minimap: { enabled: false }, fontSize: 14, fontFamily: 'Consolas, "Courier New", monospace', padding: { top: 16, bottom: 16 }, scrollBeyondLastLine: false, automaticLayout: true, readOnly, fixedOverflowWidgets: true, tabSize: 4 }} />
+  );
+
+  if (hideControls) return <div className="border border-white/15 rounded-lg overflow-hidden">
+    <div className="h-[300px]">{editor}</div>
+    <button type="button" onClick={() => setPlainEditor(!plainEditor)} className="min-h-11 px-3 text-sm text-gray-200 underline">{plainEditor ? 'Редактор с подсветкой' : 'Простой редактор'}</button>
+    {storageError && <p role="status" className="px-3 pb-3 text-xs text-amber-200">{storageError}</p>}
+  </div>;
 
   return (
-    <div className="flex flex-col gap-4 w-full">
-      <CodeVisualizer 
-        code={code} 
-        isOpen={isVisualizerOpen} 
-        onClose={() => setIsVisualizerOpen(false)} 
-      />
-      <div className="rounded-xl overflow-hidden border border-gray-700 shadow-2xl flex flex-col bg-[#12191d]">
-        <div className="bg-gray-800 px-4 py-3 flex justify-between items-center border-b border-gray-700 z-30">
-          <span className="text-sm text-gray-400 font-mono">main.py</span>
+    <div className="flex flex-col gap-3 w-full min-w-0">
+      <CodeVisualizer code={code} stdin={stdin === '' ? [] : stdin.split('\n')} isOpen={isVisualizerOpen} onClose={() => setIsVisualizerOpen(false)} />
+      <div className="border border-white/15 rounded-lg overflow-hidden bg-[#12191d]">
+        <div className="flex flex-wrap justify-between items-center gap-2 px-3 py-2 border-b border-white/10">
+          <span className="text-sm text-gray-300 font-mono">main.py</span>
           <div className="flex gap-2">
-            <button
-              onClick={() => setIsVisualizerOpen(true)}
-              disabled={isRunning || !pyodide}
-              className="flex items-center gap-2 bg-teal-600/20 hover:bg-teal-600/30 text-teal-400 px-4 py-1.5 rounded-lg text-[11px] md:text-sm font-black uppercase tracking-widest transition-all border border-teal-500/30"
-            >
-              <Eye className="w-4 h-4" />
-              <span className="hidden sm:inline">Trace</span>
-            </button>
-            <button
-              onClick={runTests}
-              disabled={isRunning || !pyodide}
-              className="flex items-center gap-2 bg-brand-primary text-black px-4 py-1.5 rounded-lg text-[11px] md:text-sm font-black uppercase tracking-widest transition-all hover:scale-105"
-            >
-              {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              <span>{isRunning ? '...' : (testCases.length > 0 ? 'Проверить' : 'Запустить')}</span>
-            </button>
+            <button type="button" onClick={() => setIsVisualizerOpen(true)} disabled={isRunning} className="flex items-center gap-2 min-h-11 px-3 text-sm text-teal-300 border border-teal-700 rounded-md disabled:opacity-50"><Eye size={16} aria-hidden="true" />По шагам</button>
+            {isRunning ? (
+              <button type="button" onClick={() => runRef.current?.cancel()} className="flex items-center gap-2 min-h-11 px-3 rounded-md border border-red-400 text-red-200"><Square size={16} aria-hidden="true" />Остановить</button>
+            ) : (
+              <button type="button" onClick={runCode} className="flex items-center gap-2 min-h-11 px-4 rounded-md bg-brand-primary text-black font-semibold"><Play size={16} aria-hidden="true" />{testCases.length ? 'Проверить' : 'Запустить'}</button>
+            )}
           </div>
-          {runtimeError && <p className="px-4 pb-2 text-xs text-red-400">{runtimeError}</p>}
         </div>
-        <div className="h-[400px] md:h-[500px] relative z-0 bg-[#12191d]">
-          <Editor
-            height="100%"
-            defaultLanguage="python"
-            theme="vs-dark"
-            value={code}
-            onChange={handleCodeChange}
-            onMount={handleEditorDidMount}
-            loading={
-              <div className="flex flex-col items-center justify-center h-full gap-4 bg-[#12191d]">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
-                <div className="text-white/50 font-mono text-xs animate-pulse">Инициализация редактора...</div>
-              </div>
-            }
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              fontFamily: 'JetBrains Mono, monospace',
-              padding: { top: 24, bottom: 16 },
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              fixedOverflowWidgets: true,
-              renderControlCharacters: true,
-              renderLineHighlight: 'all',
-              readOnly: readOnly,
-              scrollbar: {
-                vertical: 'visible',
-                horizontal: 'visible',
-                useShadows: false,
-                verticalScrollbarSize: 10,
-                horizontalScrollbarSize: 10
-              }
-            }}
-          />
+        <div className="h-[260px] md:h-[320px] relative">{editor}</div>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-t border-white/10 text-xs text-gray-400">
+          <span>{storageKey ? 'Черновик сохраняется на этом устройстве' : 'Код Python'}</span>
+          <button type="button" onClick={() => setPlainEditor(!plainEditor)} className="underline min-h-8">{plainEditor ? 'Редактор с подсветкой' : 'Простой редактор'}</button>
         </div>
+        {plainEditor && <p className="px-3 pb-3 text-xs text-gray-300">Простой редактор работает, даже если подсветка кода недоступна.</p>}
       </div>
-
-      <div className="bg-[#080d10] rounded-[2rem] border border-white/10 flex flex-col overflow-hidden shadow-2xl z-10 mt-6">
-        <div className="flex border-b border-white/10 bg-white/5 justify-between items-center pr-4">
-          <div className="flex bg-white/5">
-            <button
-              onClick={() => {
-                setActiveTab('console');
-                playSound('click');
-              }}
-              className={`px-8 py-5 font-mono text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === 'console' 
-                  ? 'text-brand-primary border-b-2 border-brand-primary bg-white/10' 
-                  : 'text-white/40 hover:text-white/80 hover:bg-white/5'
-              }`}
-            >
-              TERMINAL
+      {!testCases.length && <details className="border border-white/10 rounded-lg px-3 py-2">
+        <summary className="cursor-pointer min-h-8 text-sm text-gray-200">Ввод для input()</summary>
+        <p className="text-xs text-gray-300 mb-2">Введи значения до запуска: по одному на строку. Программа выполнится один раз.</p>
+        <textarea aria-label="Ввод для input()" value={stdin} onChange={(event) => setStdin(event.target.value)} rows={3} className="w-full bg-black/30 border border-white/20 rounded p-2 font-mono text-sm" />
+      </details>}
+      {storageError && <p role="status" className="text-sm text-amber-200">{storageError}</p>}
+      <section className="border border-white/15 rounded-lg overflow-hidden bg-[#080d10]" aria-label="Результат выполнения">
+        <div className="flex flex-wrap border-b border-white/10">
+          {(['output', ...(testCases.length ? ['tests'] : []), 'history'] as const).map((tab) => (
+            <button type="button" key={tab} onClick={() => setActiveTab(tab as typeof activeTab)} aria-pressed={activeTab === tab}
+              className={`min-h-11 px-4 text-sm border-b-2 ${activeTab === tab ? 'border-brand-primary text-brand-primary' : 'border-transparent text-gray-300'}`}>
+              {tab === 'output' ? 'Вывод' : tab === 'tests' ? 'Проверки' : 'История'}
             </button>
-            {testCases.length > 0 && (
-              <button
-                onClick={() => {
-                  setActiveTab('tests');
-                  playSound('click');
-                }}
-                className={`px-8 py-5 font-mono text-xs font-black uppercase tracking-widest transition-all ${
-                  activeTab === 'tests' 
-                    ? 'text-brand-primary border-b-2 border-brand-primary bg-white/10' 
-                    : 'text-white/40 hover:text-white/80 hover:bg-white/5'
-                }`}
-              >
-                TEST RESULTS
-              </button>
-            )}
-            <button
-              onClick={() => {
-                setActiveTab('history');
-                playSound('click');
-              }}
-              className={`px-8 py-5 font-mono text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === 'history' 
-                  ? 'text-brand-primary border-b-2 border-brand-primary bg-white/10' 
-                  : 'text-white/40 hover:text-white/80 hover:bg-white/5'
-              }`}
-            >
-              HISTORY
+          ))}
+        </div>
+        <div className="min-h-[150px] max-h-[360px] overflow-auto p-4 text-sm" aria-live="polite" aria-busy={isRunning}>
+          {isRunning && <p className="flex items-center gap-2 text-gray-200"><Loader2 size={16} className="animate-spin" />{phase === 'loading' ? 'Загрузка Python…' : 'Программа выполняется…'}</p>}
+          {activeTab === 'output' && <>
+            <pre className="font-mono whitespace-pre-wrap break-words text-gray-100">{result?.output ?? (!isRunning ? 'Запусти программу, чтобы увидеть результат.' : '')}</pre>
+            {result?.error && <p role="alert" className="mt-3 text-red-200 whitespace-pre-wrap break-words">{result.error}</p>}
+            {result?.status === 'completed' && !result.output && !testCases.length && <p className="text-gray-300">Программа завершена без вывода.</p>}
+          </>}
+          {activeTab === 'tests' && <>
+            {result?.tests.map((test, index) => <div key={index} className={`flex gap-3 p-3 mb-2 rounded-md border ${test.passed ? 'border-emerald-800 text-emerald-200' : 'border-red-800 text-red-200'}`}>
+              {test.passed ? <CheckCircle size={18} className="shrink-0" aria-hidden="true" /> : <XCircle size={18} className="shrink-0" aria-hidden="true" />}
+              <div className="min-w-0"><p className="font-semibold">Проверка {index + 1}: {test.passed ? 'пройдена' : 'не пройдена'}</p><p className="whitespace-pre-wrap break-words mt-1">{test.message}</p></div>
+            </div>)}
+            {result?.error && <p role="alert" className="text-red-200">{result.error}</p>}
+            {!result && !isRunning && <p className="text-gray-300">Нажми «Проверить», чтобы сравнить результат с условием.</p>}
+            {result?.passed && <p className="text-emerald-200">Все проверки пройдены.</p>}
+          </>}
+          {activeTab === 'history' && (historyLoading ? <p>Загрузка истории…</p> : history.length ? history.map((item, index) => (
+            <button type="button" key={index} onClick={() => handleCodeChange(item.code)} className="w-full p-3 mb-2 border border-white/15 rounded text-left min-h-11">
+              <span className="block text-gray-300">{new Date(item.timestamp?.toMillis?.() ?? Date.now()).toLocaleString('ru-RU')}</span><code className="block truncate">{item.code}</code>
             </button>
-          </div>
-          {pendingPrompt !== null && (
-            <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-widest animate-pulse">
-              ⬤ WAITING FOR INPUT
-            </span>
-          )}
-          {isRunning && pendingPrompt === null && (
-            <span className="text-[11px] font-mono text-amber-400 uppercase tracking-widest animate-pulse">
-              ⬤ RUNNING
-            </span>
-          )}
+          )) : <p className="text-gray-300">{currentUser ? 'Сохранённых попыток пока нет.' : 'История попыток доступна после входа. Текущий черновик сохранён на устройстве.'}</p>)}
         </div>
-
-        <div className="h-[280px] relative overflow-hidden bg-[#04070a]">
-          <AnimatePresence mode="wait">
-            {activeTab === 'console' && (
-              <motion.div 
-                key="console"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="p-6 h-full font-mono text-sm overflow-y-auto custom-scrollbar flex flex-col gap-0.5"
-              >
-                {terminalLines.length === 0 && pendingPrompt === null && !isRunning && (
-                  <span className="text-white/50 italic text-xs">Run code to see output...</span>
-                )}
-                {terminalLines.map((line, i) => (
-                  <div key={i} className={`leading-snug whitespace-pre-wrap ${line.type === 'input' ? 'text-emerald-400' : 'text-gray-300'}`}>
-                    {line.type === 'input' ? <span className="text-emerald-600 mr-1">▶</span> : null}{line.text}
-                  </div>
-                ))}
-                {pendingPrompt !== null && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-emerald-400 whitespace-pre">{pendingPrompt}</span>
-                    <input aria-label="Ввод для программы"
-                      ref={inputDraftRef}
-                      type="text"
-                      value={inputDraft}
-                      onChange={e => setInputDraft(e.target.value)}
-                      onKeyDown={async e => {
-                        if (e.key === 'Enter') {
-                          await submitTerminalInput(inputDraft);
-                        }
-                      }}
-                      className="flex-1 bg-transparent border-none outline-none text-emerald-300 caret-emerald-400"
-                      autoFocus
-                    />
-                    <span className="text-white/50 text-xs">Press Enter ↵</span>
-                  </div>
-                )}
-                <div ref={terminalEndRef} />
-              </motion.div>
-            )}
-
-            {activeTab === 'tests' && (
-              <motion.div 
-                key="tests"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="p-6 h-full overflow-y-auto custom-scrollbar space-y-3"
-              >
-                {testResults ? testResults.map((res, idx) => (
-                  <div key={idx} className={`flex flex-col gap-2 p-4 rounded-2xl border ${res.passed ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
-                    <div className="flex items-start gap-4">
-                      {res.passed ? <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" /> : <XCircle className="w-5 h-5 shrink-0 mt-0.5" />}
-                      <span className="leading-snug text-sm font-bold">{res.message}</span>
-                    </div>
-                    {!res.passed && res.message.includes('Ожидалось') && (
-                      <div className="ml-9 p-3 bg-black/40 rounded-xl border border-white/5 space-y-2 font-mono text-xs">
-                        <div className="grid grid-cols-[80px_1fr] gap-2">
-                          <span className="text-white/55 uppercase tracking-widest">Expected:</span>
-                          <span className="text-emerald-400 whitespace-pre-wrap">{res.message.split('Ожидалось \'')[1]?.split('\', получено')[0]}</span>
-                        </div>
-                        <div className="grid grid-cols-[80px_1fr] gap-2">
-                          <span className="text-white/55 uppercase tracking-widest">Actual:</span>
-                          <span className="text-red-400 whitespace-pre-wrap">{res.message.split('получено \'')[1]?.replace(/'$/, '')}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )) : (
-                  <span className="text-white/55 italic text-sm">Run the code to see test results.</span>
-                )}
-              </motion.div>
-            )}
-
-            {activeTab === 'history' && (
-              <motion.div 
-                key="history"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="p-6 h-full overflow-y-auto custom-scrollbar space-y-3"
-              >
-                {isHistoryLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-6 h-6 animate-spin text-brand-primary" />
-                  </div>
-                ) : submissions.length > 0 ? (
-                  submissions.map((sub, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCode(sub.code)}
-                      className="w-full flex items-center justify-between p-4 rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 transition-all text-left"
-                    >
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-bold text-white/60">
-                          {new Date(sub.timestamp?.toMillis() || Date.now()).toLocaleString()}
-                        </span>
-                        <span className="text-[11px] text-white/50 font-mono line-clamp-1">
-                          {sub.code.substring(0, 100)}...
-                        </span>
-                      </div>
-                      <div className={`px-3 py-1 rounded-full text-[11px] font-black uppercase ${
-                        sub.results.every((r: any) => r.passed) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-500'
-                      }`}>
-                        {sub.results.every((r: any) => r.passed) ? 'SUCCESS' : 'FAILED'}
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-white/50 gap-2">
-                    <Clock className="w-8 h-8" />
-                    <span className="text-sm italic">История пуста.</span>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+      </section>
     </div>
   );
 });

@@ -4,12 +4,14 @@ import { Sparkles, Zap, BrainCircuit, Rocket, Settings2, Heart, Swords, MessageS
 import { useAuth, InventoryItem } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import { playSound } from '../utils/sounds';
-import { ALL_ITEMS } from '../pages/Shop';
-import { getMentorHint } from '../services/gemini';
+import { ALL_ITEMS } from '../constants/items';
+
+import { useDialogFocus } from './Dialog';
 
 export const PetCompanion = React.memo(() => {
   const { userProfile, lastCodeResult, currentCode, currentChallenge, useItem, customizePet, trainPet } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const panelRef = useDialogFocus(isOpen, () => setIsOpen(false));
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [message, setMessage] = useState('');
@@ -19,8 +21,8 @@ export const PetCompanion = React.memo(() => {
   const [currentColor, setCurrentColor] = useState('#2dd4bf');
   const [brushSize, setBrushSize] = useState(1);
   const [isFeeding, setIsFeeding] = useState(false);
-  
-  
+
+
   const defaultPet = {
     name: 'Bit-Bot',
     type: 'pixel-slime',
@@ -39,7 +41,7 @@ export const PetCompanion = React.memo(() => {
 
   const pet = userProfile?.pet || defaultPet;
 
-  
+
   useEffect(() => {
     if (userProfile?.pet?.customPixels) {
       setPixels(userProfile.pet.customPixels);
@@ -51,32 +53,12 @@ export const PetCompanion = React.memo(() => {
   useEffect(() => {
     if (lastCodeResult) {
       setMessage(lastCodeResult.message);
-      
-      
+
+
       const timer = setTimeout(() => setMessage(''), 10000);
       return () => clearTimeout(timer);
     }
   }, [lastCodeResult]);
-
-  const handleGetHint = async () => {
-    if (!currentChallenge) {
-      setMessage('Сначала выбери задачу, чтобы я мог помочь!');
-      return;
-    }
-
-    setIsMentorLoading(true);
-    setMentorHint('');
-    try {
-      const hint = await getMentorHint(currentCode, currentChallenge);
-      setMentorHint(hint.text);
-      toast.info('Питомец запросил подсказку у ИИ-ментора.', { icon: '🧠' });
-      playSound('success');
-    } catch (err) {
-      setMessage('Ой, мой ИИ-модуль перегрелся. Попробуй позже!');
-    } finally {
-      setIsMentorLoading(false);
-    }
-  };
 
   const handlePixelClick = (index: number) => {
     const newPixels = [...pixels];
@@ -121,8 +103,8 @@ export const PetCompanion = React.memo(() => {
     setMessage(result.message);
   };
 
-  const foodItems = (userProfile?.inventory || []).filter(item => 
-    item.itemId.includes('food') || item.itemId.includes('burger') || item.itemId.includes('pizza') || 
+  const foodItems = (userProfile?.inventory || []).filter(item =>
+    item.itemId.includes('food') || item.itemId.includes('burger') || item.itemId.includes('pizza') ||
     item.itemId.includes('apple') || item.itemId.includes('coffee') || item.itemId.includes('energy') ||
     item.itemId.includes('brain') || item.itemId === 'bit_bot_food'
   );
@@ -146,7 +128,7 @@ export const PetCompanion = React.memo(() => {
 
     const trained = await trainPet(stat);
     if (!trained) return;
-    
+
     playSound('levelUp');
     setMessage(`${stat.toUpperCase()} повышена!`);
   };
@@ -159,45 +141,46 @@ export const PetCompanion = React.memo(() => {
   };
 
   const getPetTier = (level: number) => {
-    if (level >= 20) return { id: 3, name: 'Ascended', color: 'text-emerald-400', glow: 'shadow-[0_0_50px_rgba(16,185,129,0.5)]', border: 'border-emerald-500/50' };
-    if (level >= 10) return { id: 2, name: 'Advanced', color: 'text-brand-primary', glow: 'shadow-[0_0_30px_rgba(45,212,191,0.4)]', border: 'border-brand-primary/30' };
-    return { id: 1, name: 'Basic', color: 'text-white/40', glow: '', border: 'border-white/10' };
+    if (level >= 20) return { id: 3, name: 'Опытный', color: 'text-emerald-400', glow: 'shadow-[0_0_50px_rgba(16,185,129,0.5)]', border: 'border-emerald-500/50' };
+    if (level >= 10) return { id: 2, name: 'Развитый', color: 'text-brand-primary', glow: 'shadow-[0_0_30px_rgba(45,212,191,0.4)]', border: 'border-brand-primary/30' };
+    return { id: 1, name: 'Обычный', color: 'text-white/40', glow: '', border: 'border-white/10' };
   };
 
   const currentTier = getPetTier(pet.level);
 
   return (
-    <div className="fixed bottom-8 left-8 z-[100]">
+    <div className="fixed bottom-4 left-4 z-[160]">
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="absolute bottom-24 left-0 w-[500px] glass rounded-[40px] p-12 border border-white/10 shadow-[0_20px_100px_rgba(0,0,0,0.7)] overflow-hidden"
+            id="pet-panel" ref={panelRef} role="dialog" aria-modal="true" aria-label="Питомец" tabIndex={-1}
+            className="absolute bottom-20 left-0 w-[min(500px,calc(100vw-2rem))] max-h-[calc(100dvh-160px)] overflow-y-auto glass rounded-xl p-4 sm:p-6 border border-white/10 shadow-[0_20px_100px_rgba(0,0,0,0.7)] "
           >
             {}
             <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-brand-secondary/5 pointer-events-none" />
-            
+
             <div className="relative z-10">
-              <div className="flex justify-between items-start mb-8">
+              <div className="flex flex-wrap justify-between items-start gap-3 mb-6">
                 <div>
                   <h3 className="text-3xl font-black tracking-tighter">{pet.name}</h3>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-white/40 uppercase tracking-widest mt-1">
-                    <span className={`px-3 py-1 rounded-full bg-brand-primary/20 text-brand-primary border ${currentTier.border}`}>LVL {pet.level}</span>
-                    <span className={currentTier.color}>{currentTier.name} Tier</span>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-white/40 uppercase tracking-widest mt-1">
+                    <span className={`px-3 py-1 rounded-full bg-brand-primary/20 text-brand-primary border ${currentTier.border}`}>Уровень {pet.level}</span>
+                    <span className={currentTier.color}>{currentTier.name}</span>
                     <span>{pet.xp} / 1000 XP</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => { setIsDrawing(!isDrawing); setIsCustomizing(false); }}
                     className={`p-3 rounded-2xl transition-all ${isDrawing ? 'bg-brand-primary text-black' : 'bg-white/5 text-white/40 hover:text-white'}`}
                     title="Рисовать"
                   >
                     <Palette className="w-5 h-5" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => { setIsCustomizing(!isCustomizing); setIsDrawing(false); }}
                     className={`p-3 rounded-2xl transition-all ${isCustomizing ? 'bg-brand-primary text-black' : 'bg-white/5 text-white/40 hover:text-white'}`}
                     title="Настройки"
@@ -212,18 +195,18 @@ export const PetCompanion = React.memo(() => {
                   <div className="grid grid-cols-8 gap-1 aspect-square bg-black/40 p-2 rounded-2xl border border-white/10">
                     {pixels.map((color, i) => (
                       <button
-                        key={i}
+                        key={i} aria-label={"Пиксель "+(i+1)}
                         onClick={() => handlePixelClick(i)}
                         className="w-full h-full rounded-sm border border-white/5 transition-colors"
                         style={{ backgroundColor: color }}
                       />
                     ))}
                   </div>
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex flex-wrap gap-2 max-w-[200px]">
                       {['#2dd4bf', '#10b981', '#f59e0b', '#ef4444', '#ffffff', 'transparent', '#000000', '#fbbf24', '#34d399'].map(c => (
                         <button
-                          key={c}
+                          key={c} aria-label={"Цвет "+c}
                           onClick={() => setCurrentColor(c)}
                           className={`w-6 h-6 rounded-full border-2 transition-transform ${currentColor === c ? 'scale-125 border-white' : 'border-transparent'}`}
                           style={{ backgroundColor: c === 'transparent' ? 'white' : c, backgroundImage: c === 'transparent' ? 'linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)' : 'none', backgroundSize: '4px 4px', backgroundPosition: '0 0, 2px 2px' }}
@@ -231,14 +214,14 @@ export const PetCompanion = React.memo(() => {
                       ))}
                     </div>
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={clearPixels}
                         className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
                         title="Очистить"
                       >
                         <Eraser className="w-4 h-4" />
                       </button>
-                      <button 
+                      <button
                         onClick={savePixels}
                         className="flex items-center gap-2 px-6 py-3 bg-brand-primary text-black font-black rounded-xl text-xs uppercase tracking-widest hover:scale-105 transition-all"
                       >
@@ -264,7 +247,7 @@ export const PetCompanion = React.memo(() => {
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Вид (Эмодзи)</label>
                     <div className="flex gap-2">
-                      <input aria-label="Эмодзи питомца" 
+                      <input aria-label="Эмодзи питомца"
                         type="text"
                         value={pet.type.startsWith('emoji:') ? pet.type.replace('emoji:', '') : ''}
                         onChange={(e) => { void customizePet({ name: pet.name, type: `emoji:${e.target.value}`, customPixels: pet.customPixels }); }}
@@ -279,7 +262,7 @@ export const PetCompanion = React.memo(() => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Имя питомца</label>
-                    <input aria-label="Имя питомца" 
+                    <input aria-label="Имя питомца"
                       type="text"
                       value={pet.name}
                         onChange={(e) => { void customizePet({ name: e.target.value, type: pet.type, customPixels: pet.customPixels }); }}
@@ -287,7 +270,7 @@ export const PetCompanion = React.memo(() => {
                       placeholder="Имя питомца"
                     />
                   </div>
-                  <button 
+                  <button
                     onClick={() => setIsCustomizing(false)}
                     className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase tracking-widest transition-all"
                   >
@@ -298,7 +281,7 @@ export const PetCompanion = React.memo(() => {
                 <>
                   <div className="flex justify-center py-12 relative">
                     <motion.div
-                      animate={{ 
+                      animate={{
                         y: [0, -15, 0],
                         scale: [1, 1.1, 1],
                         rotate: [0, 5, -5, 0]
@@ -319,7 +302,7 @@ export const PetCompanion = React.memo(() => {
                       ) : (
                         <div className="relative">
                           {currentTier.id >= 2 && (
-                            <motion.div 
+                            <motion.div
                                animate={{ rotate: 360 }}
                                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
                                className={`absolute -inset-8 rounded-full border-2 border-dashed ${currentTier.id === 3 ? 'border-emerald-500/20' : 'border-brand-primary/20'}`}
@@ -330,58 +313,43 @@ export const PetCompanion = React.memo(() => {
                           </span>
                         </div>
                       )}
-                      
-                      {}
-                      {currentTier.id >= 2 && (
-                        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
-                           {pet.level >= 10 && (
-                             <div className="px-2 py-0.5 bg-teal-500/20 border border-teal-500/30 rounded text-[11px] font-black text-teal-400 uppercase tracking-tighter whitespace-nowrap">
-                               Logic Aura Active
-                             </div>
-                           )}
-                           {pet.level >= 20 && (
-                             <div className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 rounded text-[11px] font-black text-amber-500 uppercase tracking-tighter whitespace-nowrap">
-                               Coin Magnet x1.2
-                             </div>
-                           )}
-                        </div>
-                      )}
+
                     </motion.div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-3 mb-8">
-                    <button 
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+                    <button
                       onClick={() => handleStatBoost('logic')}
                       className="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-teal-500/30 transition-all group"
                     >
                       <BrainCircuit className="w-4 h-4 text-teal-400 mb-1 mx-auto group-hover:scale-110 transition-transform" />
-                      <div className="text-[11px] font-bold text-white/40 uppercase">Logic</div>
+                      <div className="text-[11px] font-bold text-white/40 uppercase">Логика</div>
                       <div className="text-xs font-black">{pet.stats.logic}</div>
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleStatBoost('speed')}
                       className="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-emerald-500/30 transition-all group"
                     >
                       <Zap className="w-4 h-4 text-emerald-400 mb-1 mx-auto group-hover:scale-110 transition-transform" />
-                      <div className="text-[11px] font-bold text-white/40 uppercase">Speed</div>
+                      <div className="text-[11px] font-bold text-white/40 uppercase">Скорость</div>
                       <div className="text-xs font-black">{pet.stats.speed}</div>
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleStatBoost('power')}
                       className="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-red-500/30 transition-all group"
                     >
                       <Swords className="w-4 h-4 text-red-400 mb-1 mx-auto group-hover:scale-110 transition-transform" />
-                      <div className="text-[11px] font-bold text-white/40 uppercase">Power</div>
+                      <div className="text-[11px] font-bold text-white/40 uppercase">Сила</div>
                       <div className="text-xs font-black">{pet.stats.power}</div>
                     </button>
-                    <button 
-                      onClick={() => handleStatBoost('intellect' as any)}
+                    <div
+
                       className="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-emerald-500/30 transition-all group"
                     >
                       <BrainCircuit className="w-4 h-4 text-emerald-400 mb-1 mx-auto group-hover:scale-110 transition-transform" />
-                      <div className="text-[11px] font-bold text-white/40 uppercase">Intellect</div>
+                      <div className="text-[11px] font-bold text-white/40 uppercase">Интеллект</div>
                       <div className="text-xs font-black">{pet.stats.intellect || 10}</div>
-                    </button>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
@@ -394,26 +362,8 @@ export const PetCompanion = React.memo(() => {
                       </p>
                     </div>
 
-                    {mentorHint && (
-                      <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-4"
-                      >
-                        <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center shrink-0">
-                          <GraduationCap className="w-5 h-5 text-emerald-400" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">Совет Ментора</p>
-                          <p className="text-xs text-white/70 leading-relaxed font-medium">
-                            {mentorHint}
-                          </p>
-                        </div>
-                      </motion.div>
-                    )}
-                    
                     <div className="grid grid-cols-2 gap-3">
-                      <button 
+                      <button
                         onClick={() => {
                           if (foodItems.length === 0) {
                             playSound('error');
@@ -426,14 +376,7 @@ export const PetCompanion = React.memo(() => {
                       >
                         <Utensils className="w-4 h-4 text-amber-500" /> Покормить
                       </button>
-                      <button 
-                        onClick={handleGetHint}
-                        disabled={isMentorLoading}
-                        className="py-4 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50"
-                      >
-                        {isMentorLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GraduationCap className="w-4 h-4" />}
-                        Ментор
-                      </button>
+
                     </div>
 
                     {}
@@ -457,7 +400,7 @@ export const PetCompanion = React.memo(() => {
                                 className="aspect-square bg-white/5 hover:bg-brand-primary/20 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 transition-all group"
                               >
                                 <span className="text-lg group-hover:scale-110 transition-transform">
-                                  {item.itemId.includes('burger') ? '🍔' : 
+                                  {item.itemId.includes('burger') ? '🍔' :
                                    item.itemId.includes('pizza') ? '🍕' :
                                    item.itemId.includes('apple') ? '🍎' :
                                    item.itemId.includes('coffee') ? '☕' :
@@ -484,6 +427,8 @@ export const PetCompanion = React.memo(() => {
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
+        aria-expanded={isOpen} aria-controls="pet-panel"
+        aria-label={isOpen ? "Закрыть питомца" : "Открыть питомца"}
         onClick={() => {
           setIsOpen(!isOpen);
           playSound('click');

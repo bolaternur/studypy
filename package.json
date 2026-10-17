@@ -11,7 +11,18 @@
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "lint": "npm run typecheck && npm run validate",
     "typecheck": "tsc --noEmit",
-    "validate": "tsx scripts/validate-lessons.ts"
+    "validate": "tsx scripts/validate-lessons.ts",
+    "test:runtime": "tsx scripts/test-python-runtime.ts",
+    "test:games": "tsx scripts/test-games.ts",
+    "test:policy": "tsx scripts/test-result-policy.ts",
+    "test": "npm run test:runtime && npm run test:content && npm run test:games && npm run test:policy && npm run test:storage && npm run test:dialogs && npm run test:sounds && npm run test:typing && npm run test:typing-levels && npm run test:mentor",
+    "test:dialogs": "tsx scripts/test-scroll-lock.ts",
+    "test:content": "tsx scripts/test-content.ts",
+    "test:storage": "tsx scripts/test-storage.ts",
+    "test:sounds": "tsx scripts/test-sounds.ts",
+    "test:typing": "tsx scripts/test-typing.ts",
+    "test:mentor": "tsx scripts/test-mentor-knowledge.ts",
+    "test:typing-levels": "tsx scripts/test-typing-levels.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

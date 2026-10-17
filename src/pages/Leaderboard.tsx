@@ -33,7 +33,7 @@ const LeaderboardRow = React.memo(({ user, index, onClick }: { user: UserProfile
           <span className="text-white/50">{index + 1}</span>
         )}
       </div>
-      
+
       <div className="col-span-6 flex items-center gap-4">
         <div className="relative">
           <img
@@ -75,6 +75,7 @@ export const Leaderboard = () => {
   const { currentUser } = useAuth();
   const [topUsers, setTopUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError,setLoadError]=useState('');
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
@@ -84,7 +85,9 @@ export const Leaderboard = () => {
       limit(50)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, {includeMetadataChanges:true}, (snapshot) => {
+      if(snapshot.metadata.fromCache && snapshot.empty){setLoadError('Нет подключения к рейтингу. Пустая локальная копия не означает отсутствие участников.');setLoading(false);return;}
+      setLoadError('');
       const users = snapshot.docs.map(doc => doc.data() as UserProfile);
       setTopUsers(users);
       setLoading(false);
@@ -121,6 +124,7 @@ export const Leaderboard = () => {
     }
   }, [currentUser]);
 
+  if (loadError) return <div className="page-container program-page"><h1>Игровой рейтинг</h1><p className="muted mt-4" role="alert">{loadError}</p><button className="secondary-button mt-5" onClick={()=>window.location.reload()}>Попробовать ещё раз</button></div>;
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 bg-[#04070a] text-white">
       <div className="max-w-4xl mx-auto">
@@ -133,10 +137,10 @@ export const Leaderboard = () => {
             <Trophy className="w-12 h-12 text-brand-primary" />
           </motion.div>
           <h1 className="text-5xl font-display font-bold mb-4 tracking-tight">
-            <TextReveal text="Зал Славы" delay={0.1} />
+            <TextReveal text="Игровой рейтинг" delay={0.1} />
           </h1>
           <p className="text-white/40 text-lg max-w-xl mx-auto font-light">
-            <TextReveal text="Лучшие кодеры системы. Те, кто превратил байты в искусство." delay={0.3} />
+            <TextReveal text="Исторические игровые XP. Эти баллы не оценивают знание Python; новые результаты из браузера не участвуют в рейтинге." delay={0.3} />
           </p>
         </div>
 

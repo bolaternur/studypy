@@ -1,30 +1,25 @@
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import Lenis from 'lenis';
 import { Toaster } from 'sonner';
-import { Loader2, Terminal, X } from 'lucide-react';
+import { Terminal, X } from 'lucide-react';
 
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { Navbar } from './components/Layout';
+import { LoadingScreen } from './components/LoadingScreen';
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { ServiceNotice } from './components/ServiceNotice';
 import { MentorCompanion } from './components/MentorCompanion';
-import { PetCompanion } from './components/PetCompanion';
-import { QuestSidebar } from './components/QuestSidebar';
-import { GlowingCursor } from './components/GlowingCursor';
 import { LEGAL_DOCUMENTS, type LegalDocumentId } from './constants/legal';
+import { acquireBodyScrollLock } from './utils/scrollLock';
 
 const Pathways = React.lazy(() => import('./pages/Pathways').then(m => ({ default: m.Pathways })));
 const LessonDetail = React.lazy(() => import('./pages/LessonDetail').then(m => ({ default: m.LessonDetail })));
-const PythonGenesis = React.lazy(() => import('./pages/lessons/PythonGenesis').then(m => ({ default: m.PythonGenesis })));
-const DataVessels = React.lazy(() => import('./pages/lessons/DataVessels').then(m => ({ default: m.DataVessels })));
-const TheCollection = React.lazy(() => import('./pages/lessons/TheCollection').then(m => ({ default: m.TheCollection })));
-const TemporalLoops = React.lazy(() => import('./pages/lessons/TemporalLoops').then(m => ({ default: m.TemporalLoops })));
+const PetPage = React.lazy(() => import('./pages/PetPage').then(m => ({ default: m.PetPage })));
 const Community = React.lazy(() => import('./pages/Community').then(m => ({ default: m.Community })));
 const Arcade = React.lazy(() => import('./pages/Arcade').then(m => ({ default: m.Arcade })));
+const TypingTrainer = React.lazy(() => import('./pages/TypingTrainer').then(m => ({ default: m.TypingTrainer })));
 const Sandbox = React.lazy(() => import('./pages/Sandbox').then(m => ({ default: m.Sandbox })));
 const Leaderboard = React.lazy(() => import('./pages/Leaderboard').then(m => ({ default: m.Leaderboard })));
 const Shop = React.lazy(() => import('./pages/Shop').then(m => ({ default: m.Shop })));
@@ -46,30 +41,22 @@ const UserProfilePublic = React.lazy(() => import('./pages/UserProfilePublic').t
    Route chrome
    ─────────────────────────────────────────────────────────────── */
 
-const PageLoading = () => (
-  <div
-    role="status"
-    aria-live="polite"
-    className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-bg-dark/85 backdrop-blur-md"
-  >
-    <Loader2 className="h-9 w-9 animate-spin text-emerald-400" aria-hidden="true" />
-    <p className="type-eyebrow mt-6">загружаем раздел</p>
-  </div>
-);
+const PageLoading = () => <LoadingScreen />;
 
 /** Per-route document titles — the app previously shipped one title for every screen. */
 const ROUTE_TITLES: Record<string, string> = {
   '/': 'StudyPy — Python с нуля, прямо в браузере',
   '/pathways': 'Программа обучения — StudyPy',
   '/sandbox': 'Песочница — StudyPy',
-  '/arcade': 'Аркада — StudyPy',
+  '/arcade': 'Учебные игры — StudyPy',
+  '/typing': 'Набор кода Python — StudyPy',
   '/daily': 'Задача дня — StudyPy',
   '/leaderboard': 'Рейтинг — StudyPy',
   '/shop': 'Магазин — StudyPy',
   '/inventory': 'Инвентарь — StudyPy',
   '/friends': 'Друзья — StudyPy',
   '/guilds': 'Гильдии — StudyPy',
-  '/tournaments': 'Турниры — StudyPy',
+  '/tournaments': 'Серии задач — StudyPy',
   '/duels': 'Дуэли — StudyPy',
   '/boss-arena': 'Испытания — StudyPy',
   '/community': 'Сообщество — StudyPy',
@@ -95,32 +82,6 @@ function RouteEffects() {
  * motion — hijacking the scroll wheel is exactly the kind of thing that
  * preference is asking us not to do.
  */
-function SmoothScroll() {
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    const lenis = new Lenis({
-      duration: 1.05,
-      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-    });
-
-    let frame = 0;
-    const raf = (time: number) => {
-      lenis.raf(time);
-      frame = requestAnimationFrame(raf);
-    };
-    frame = requestAnimationFrame(raf);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      lenis.destroy();
-    };
-  }, []);
-
-  return null;
-}
-
 /* ───────────────────────────────────────────────────────────────
    Legal dialog
    ─────────────────────────────────────────────────────────────── */
@@ -166,12 +127,11 @@ const LegalModal = ({
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const releaseScroll = acquireBodyScrollLock();
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = previousOverflow;
+      releaseScroll();
       restoreFocusTo.current?.focus();
     };
   }, [documentId, onClose]);
@@ -244,13 +204,11 @@ const AppRoutes = () => {
     <Routes location={location}>
       <Route path="/" element={<Home />} />
       <Route path="/pathways" element={<Pathways />} />
-      <Route path="/lesson/intro" element={<PythonGenesis />} />
-      <Route path="/lesson/variables" element={<DataVessels />} />
-      <Route path="/lesson/lists" element={<TheCollection />} />
-      <Route path="/lesson/loops" element={<TemporalLoops />} />
       <Route path="/lesson/:id" element={<LessonDetail />} />
+      <Route path="/pet" element={<PetPage />} />
       <Route path="/community" element={<Community />} />
       <Route path="/arcade" element={<Arcade />} />
+      <Route path="/typing" element={<TypingTrainer />} />
       <Route path="/sandbox" element={<Sandbox />} />
       <Route path="/sandbox/:id" element={<Sandbox />} />
       <Route path="/collaborative" element={<Sandbox />} />
@@ -279,7 +237,7 @@ const AppRoutes = () => {
    ─────────────────────────────────────────────────────────────── */
 
 const Footer = ({ onOpenLegal }: { onOpenLegal: (id: LegalDocumentId) => void }) => (
-  <footer className="border-t border-hairline bg-surface-1/50 px-6 py-16 md:px-10">
+  <footer className="border-t border-hairline bg-surface-1/50 px-6 py-6 md:px-10">
     <div className="mx-auto max-w-[104rem]">
       <div className="flex flex-col items-start justify-between gap-10 md:flex-row md:items-center">
         <div className="flex items-center gap-2.5">
@@ -310,34 +268,25 @@ const Footer = ({ onOpenLegal }: { onOpenLegal: (id: LegalDocumentId) => void })
 
 const AppContent = () => {
   const [legalDocumentId, setLegalDocumentId] = useState<LegalDocumentId | null>(null);
-  const { performanceSettings } = useAuth();
+
 
   return (
     <Router>
       <RouteEffects />
-      <SmoothScroll />
-      <GlowingCursor />
+
+
 
       <a href="#main" className="skip-link">
         Перейти к содержимому
       </a>
 
       <div className="relative min-h-screen bg-bg-dark text-ink-100">
-        {/* Ambient wash. Two soft fields only — the old build stacked a node
-            graph, a grid and two blurs, which cost more than it added. */}
-        {!performanceSettings.lowPerfMode && (
-          <div className="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
-            <div className="absolute -left-[10%] top-0 h-[45vw] w-[45vw] rounded-full bg-emerald-500/[0.07] blur-[150px]" />
-            <div className="absolute -right-[10%] bottom-0 h-[50vw] w-[50vw] rounded-full bg-teal-500/[0.06] blur-[170px]" />
-          </div>
-        )}
-
         <div className="relative z-10">
           <Toaster position="top-right" richColors theme="dark" />
-          <QuestSidebar />
+
           <Navbar />
 
-          <main id="main">
+          <main id="main" tabIndex={-1}>
             <ErrorBoundary>
               <Suspense fallback={<PageLoading />}>
                 <AppRoutes />
@@ -346,15 +295,15 @@ const AppContent = () => {
           </main>
 
           <MentorCompanion />
-          <PetCompanion />
+
 
           <Footer onOpenLegal={setLegalDocumentId} />
         </div>
       </div>
 
-      <ServiceNotice />
 
-      {!performanceSettings.lowPerfMode && <div className="grain" aria-hidden="true" />}
+
+
 
       <LegalModal documentId={legalDocumentId} onClose={() => setLegalDocumentId(null)} />
     </Router>

@@ -62,8 +62,15 @@ service cloud.firestore {
 
     function isSafeInitialUser(data) {
       return isValidUser(data) &&
+             data.keys().hasOnly(['uid', 'username', 'xp', 'level', 'coins',
+               'completedLessons', 'inventory', 'stats', 'perks', 'skillPoints',
+               'achievements', 'createdAt', 'avatar', 'bio', 'role']) &&
              data.xp == 0 && data.level == 1 && data.coins == 100 &&
-             data.inventory.size() == 0 && data.completedLessons.size() == 0 &&
+             data.inventory.size() == 0 && data.completedLessons is list && data.completedLessons.size() == 0 &&
+             data.perks is list && data.perks.size() == 0 &&
+             data.achievements is list && data.achievements.size() == 0 &&
+             data.skillPoints == 0 &&
+             data.stats.keys().hasOnly(['logic', 'speed', 'power', 'intellect', 'stamina']) &&
              data.stats.logic == 1 && data.stats.speed == 1 && data.stats.power == 1 &&
              data.stats.intellect == 1 && data.stats.stamina == 1 &&
              (!('role' in data) || data.role == 'user');
@@ -115,7 +122,7 @@ service cloud.firestore {
     match /chats/{chatId} {
       allow read: if isAuthenticated() && (request.auth.uid in resource.data.participants);
       allow write: if isAdmin();
-      
+
       match /messages/{messageId} {
         allow read: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
         allow write: if isAdmin();
@@ -169,7 +176,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isOwner(userId) && isSafeInitialUser(request.resource.data);
-      
+
       allow update: if isAdmin() || (isOwner(userId) && hasOnlyPublicProfileChanges());
       allow delete: if isAdmin();
     }

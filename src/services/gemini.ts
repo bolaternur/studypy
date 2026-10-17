@@ -1,4 +1,5 @@
 import { postAuthenticated } from './serverApi';
+import { LESSON_CATALOG } from '../constants/lesson-catalog';
 
 export interface MentorChatMessage {
   role: 'user' | 'assistant';
@@ -42,7 +43,7 @@ export interface DailyChallenge {
 const normalizeReply = (data: { text?: unknown; source?: unknown; lessonId?: unknown }): MentorReply => ({
   text: typeof data.text === 'string' && data.text.trim().length > 0
     ? data.text
-    : 'Ответ пришёл пустым. Попробуйте переформулировать вопрос.',
+    : 'Ответ пришёл пустым. Попробуй переформулировать вопрос.',
   source: data.source === 'ai' ? 'ai' : 'offline',
   lessonId: typeof data.lessonId === 'string' ? data.lessonId : undefined,
 });
@@ -59,22 +60,28 @@ export const getMentorHint = async (
   challenge: string,
   error?: string,
 ): Promise<MentorReply> => {
-  const data = await postAuthenticated<{ text: string; source?: string; lessonId?: string }>(
-    '/mentor/hint',
-    { code, challenge, error },
-  );
-  return normalizeReply(data);
+  try {
+    const data = await postAuthenticated<{ text: string; source?: string; lessonId?: string }>(
+      '/mentor/hint', { code, challenge, error },
+    );
+    return normalizeReply(data);
+  } catch {
+    return localKnowledgeReply(error?.trim() || challenge, true);
+  }
 };
 
 export const getMentorChat = async (
   messages: MentorChatMessage[],
   profile?: MentorChatProfile,
 ): Promise<MentorReply> => {
-  const data = await postAuthenticated<{ text: string; source?: string; lessonId?: string }>(
-    '/mentor/chat',
-    { messages: messages.slice(-6), profile },
-  );
-  return normalizeReply(data);
+  try {
+    const data = await postAuthenticated<{ text: string; source?: string; lessonId?: string }>(
+      '/mentor/chat', { messages: messages.slice(-6), profile },
+    );
+    return normalizeReply(data);
+  } catch {
+    return localKnowledgeReply(messages.filter(message => message.role === 'user').at(-1)?.content ?? '');
+  }
 };
 
 /**
@@ -84,18 +91,32 @@ export const getMentorChat = async (
  * and nothing to authorise. Signed-in visitors go through `getMentorChat`,
  * which can use the model when one is configured.
  */
+async function localKnowledgeReply(question: string, hint = false): Promise<MentorReply> {
+  // The full reference is downloaded only when the service is unavailable.
+  const knowledge = await import('../constants/mentor-knowledge');
+  const answer = hint
+    ? knowledge.hintFromKnowledge(question, LESSON_CATALOG)
+    : knowledge.answerFromKnowledge(question, LESSON_CATALOG);
+  return { text: answer.text, lessonId: answer.lessonId, source: 'offline' };
+}
+
 export const askMentorAnonymously = async (question: string): Promise<MentorReply> => {
-  const response = await fetch('/api/mentor/ask', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Mentor request failed: ${response.status}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    const response = await fetch('/api/mentor/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Mentor request failed: ${response.status}`);
+    return normalizeReply(await response.json());
+  } catch {
+    return localKnowledgeReply(question);
+  } finally {
+    clearTimeout(timer);
   }
-
-  return normalizeReply(await response.json());
 };
 
 export const generateDailyChallenge = async (userLevel: number): Promise<DailyChallenge> => {

@@ -8,7 +8,7 @@
     <title>StudyPy — Python с нуля, прямо в браузере</title>
     <meta
       name="description"
-      content="73 урока, 365 задач с автоматической проверкой и настоящий Python в браузере. Ничего не нужно устанавливать."
+      content="Короткие уроки, задачи с проверкой и настоящий Python в браузере. Ничего не нужно устанавливать."
     />
     <meta
       name="keywords"
@@ -28,14 +28,14 @@
     <meta property="og:title" content="StudyPy — Python с нуля, прямо в браузере" />
     <meta
       property="og:description"
-      content="73 урока, 365 задач с автоматической проверкой и настоящий Python в браузере."
+      content="Короткие уроки, задачи с проверкой и настоящий Python в браузере."
     />
 
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="StudyPy — Python с нуля, прямо в браузере" />
     <meta
       name="twitter:description"
-      content="73 урока, 365 задач с автоматической проверкой и настоящий Python в браузере."
+      content="Короткие уроки, задачи с проверкой и настоящий Python в браузере."
     />
 
     <!--
@@ -43,34 +43,48 @@
 
       It used to sit in <head> as a render-blocking script, so every visitor
       downloaded the Python runtime loader before the landing page could paint —
-      including the majority who never open the editor. `CodeEditor` injects it
+      including the majority who never open the editor. `worker loads it
       on demand, once, with proper load and error handling.
     -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <script>
-      // Some third-party runtimes try to replace window.fetch, which throws in
-      // browsers where the property is a getter. Make the assignment a no-op
-      // instead of letting it break the page.
-      try {
-        const originalFetch = window.fetch;
-        Object.defineProperty(window, 'fetch', {
-          configurable: true,
-          enumerable: true,
-          get: () => originalFetch,
-          set: (value) => {
-            console.warn('Blocked an attempt to overwrite window.fetch:', value);
-          },
-        });
-      } catch (error) {
-        console.error('Could not guard window.fetch:', error);
-      }
-    </script>
+
+    <!-- Ring animation adapted from Griffin Johnston / ldrs (MIT).
+         License: /third-party-licenses/ldrs-MIT.txt -->
+    <style id="studypy-loading-styles">
+      .studypy-loading-screen { position: fixed; inset: 0; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100dvh; overflow: auto; padding: 24px; background: #080d10; color: #e8f3ec; text-align: center; font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+      .studypy-loading-brand { margin: 0 0 24px; font-size: 24px; font-weight: 700; letter-spacing: -.03em; }
+      .studypy-loading-ring { width: 44px; height: 44px; flex-shrink: 0; overflow: visible; color: #34d399; transform-origin: center; animation: studypy-ring-rotate 2s linear infinite; }
+      .studypy-loading-ring__track { stroke: currentColor; opacity: .18; }
+      .studypy-loading-ring__arc { stroke: currentColor; stroke-dasharray: 1, 200; stroke-dashoffset: 0; stroke-linecap: round; animation: studypy-ring-stretch 1.5s ease-in-out infinite; }
+      .studypy-loading-label { margin: 20px 0 0; color: #c7d6ce; font-size: 16px; line-height: 1.5; }
+      .studypy-loading-recovery { max-width: 28em; margin-top: 20px; visibility: hidden; animation: studypy-loading-reveal 0s 12s forwards; }
+      .studypy-loading-recovery p { margin: 0 0 14px; color: #bac9c2; font-size: 14px; line-height: 1.6; }
+      .studypy-loading-retry { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; box-sizing: border-box; padding: 10px 18px; border: 1px solid #34d399; border-radius: 8px; background: #34d399; color: #080d10; font: 600 14px/1.5 Inter, system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+      .studypy-loading-retry:hover { background: #6ee7b7; border-color: #6ee7b7; }
+      .studypy-loading-retry:focus-visible { outline: 2px solid #a7f3d0; outline-offset: 4px; }
+      @keyframes studypy-ring-rotate { to { transform: rotate(360deg); } }
+      @keyframes studypy-ring-stretch { 0% { stroke-dasharray: 0, 150; stroke-dashoffset: 0; } 50% { stroke-dasharray: 75, 150; stroke-dashoffset: -25; } 100% { stroke-dashoffset: -99; } }
+      @keyframes studypy-loading-reveal { to { visibility: visible; } }
+      @media (prefers-reduced-motion: reduce) { .studypy-loading-ring, .studypy-loading-ring__arc { animation: none; } .studypy-loading-ring__arc { stroke-dasharray: 25, 100; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <noscript>
+    <div id="root">
+      <div id="studypy-bootstrap-loader" class="studypy-loading-screen" role="status" aria-live="polite" aria-busy="true">
+        <p class="studypy-loading-brand">StudyPy</p>
+        <svg class="studypy-loading-ring" viewBox="0 0 40 40" width="44" height="44" aria-hidden="true" focusable="false">
+          <circle class="studypy-loading-ring__track" cx="20" cy="20" r="17" pathLength="100" stroke-width="3" fill="none" />
+          <circle class="studypy-loading-ring__arc" cx="20" cy="20" r="17" pathLength="100" stroke-width="3" fill="none" />
+        </svg>
+        <p class="studypy-loading-label">Открываем StudyPy…</p>
+        <div class="studypy-loading-recovery">
+          <p>Загрузка дольше обычного. Проверь подключение или обнови страницу.</p>
+          <a class="studypy-loading-retry" href="">Обновить страницу</a>
+        </div>
+      </div>
+    </div>
+    <noscript><style>#studypy-bootstrap-loader { display: none; }</style>
       StudyPy — интерактивная платформа для изучения Python. Для работы
       редактора кода и уроков необходим включённый JavaScript.
     </noscript>

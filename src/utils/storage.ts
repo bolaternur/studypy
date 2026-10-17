@@ -26,11 +26,12 @@ const getRaw = (key: string): string | null => {
   }
 };
 
-const setRaw = (key: string, value: string): void => {
+const setRaw = (key: string, value: string): boolean => {
   try {
     window.localStorage.setItem(key, value);
+    return true;
   } catch {
-    /* quota exceeded or storage disabled — the app works without persistence */
+    return false;
   }
 };
 
@@ -53,8 +54,7 @@ const readWithMigration = (key: string): string | null => {
   const legacy = getRaw(legacyKey);
   if (legacy === null) return null;
 
-  setRaw(key, legacy);
-  removeRaw(legacyKey);
+  if (setRaw(key, legacy)) removeRaw(legacyKey);
   return legacy;
 };
 
@@ -62,7 +62,7 @@ export const readString = (key: string, fallback: string | null = null): string 
   readWithMigration(key) ?? fallback
 );
 
-export const writeString = (key: string, value: string): void => setRaw(key, value);
+export const writeString = (key: string, value: string): boolean => setRaw(key, value);
 
 /**
  * Reads JSON and validates it before handing it back. A value that fails
@@ -88,11 +88,11 @@ export const readJson = <T>(
   return fallback;
 };
 
-export const writeJson = (key: string, value: unknown): void => {
+export const writeJson = (key: string, value: unknown): boolean => {
   try {
-    setRaw(key, JSON.stringify(value));
+    return setRaw(key, JSON.stringify(value));
   } catch {
-    /* value was not serialisable — skip persistence rather than throw */
+    return false;
   }
 };
 

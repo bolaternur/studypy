@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private handleRetry = (): void => {
-    this.setState({ error: null });
+    window.location.reload();
   };
 
   render(): ReactNode {

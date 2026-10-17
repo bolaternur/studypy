@@ -1,1567 +1,216 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Terminal, Play, RotateCcw, Trophy, Skull, Star, Code2, Keyboard, BrainCircuit, Blocks, Gamepad2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Bug, Eye, Scissors, Swords, Zap, TerminalSquare, Search, Clock, Target, ShieldCheck, MessageCircle, Loader2 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { playSound } from '../utils/sounds';
-import { Duel } from './Duel';
-import { Sandbox } from './Sandbox';
-import { PetCompanion } from '../components/PetCompanion';
-import { TextReveal } from '../components/TextReveal';
-import { MagneticButton } from '../components/MagneticButton';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Bot, Bug, Check, Circle, Code2, Eye, Gamepad2, Gem, Keyboard, Play, RotateCcw, Square, X } from 'lucide-react';
+import { startPythonRun } from '../runtime/python';
+import { QUIZZES, ROBOT_LEVELS, answerQuiz, isRobotSnapshot, newQuiz, nextQuizQuestion, quizResult, robotSetup, robotSolved, validRobotPath, ROBOT_EXPRESSION, type QuizState, type RobotSnapshot } from '../games/arcade';
+import { advanceSnake, newSnake, type Direction } from '../games/snake';
 
+const buttonBase = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50';
+const button = `${buttonBase} border-white/20 text-white hover:border-emerald-400 hover:bg-emerald-400/10`;
+const primaryButton = `${buttonBase} border-emerald-400 bg-emerald-400 text-[#08130e] hover:bg-emerald-300`;
+const panel = 'rounded-xl border border-white/15 bg-[#101b19] p-4 sm:p-6';
 
-type Position = { x: number; y: number };
-type Entity = { id: string; type: 'player' | 'slime' | 'gem' | 'wall'; pos: Position; hp?: number };
+function readSaved<T>(key: string, fallback: T, valid: (value: unknown) => value is T): T {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(key) || 'null');
+    return valid(raw) ? raw : fallback;
+  } catch { return fallback; }
+}
+function save(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
+}
+function useDraft(key: string, initial: string) {
+  const [code, setCode] = useState(() => readSaved(key, initial, (value): value is string => typeof value === 'string'));
+  const [saved, setSaved] = useState(true);
+  const changeCode = (value: string) => {
+    setCode(value);
+    try { localStorage.setItem(key, JSON.stringify(value)); setSaved(true); } catch { setSaved(false); }
+  };
+  return { code, setCode: changeCode, saved };
+}
 
-const GRID_SIZE = 8;
-const CELL_SIZE = 48; 
-
-const INITIAL_ENTITIES: Entity[] = [
-  { id: 'p1', type: 'player', pos: { x: 1, y: 1 }, hp: 3 },
-  { id: 's1', type: 'slime', pos: { x: 4, y: 2 }, hp: 1 },
-  { id: 's2', type: 'slime', pos: { x: 6, y: 5 }, hp: 1 },
-  { id: 'g1', type: 'gem', pos: { x: 6, y: 1 } },
-  { id: 'g2', type: 'gem', pos: { x: 1, y: 6 } },
-  
-  { id: 'w1', type: 'wall', pos: { x: 3, y: 1 } },
-  { id: 'w2', type: 'wall', pos: { x: 3, y: 2 } },
-  { id: 'w3', type: 'wall', pos: { x: 3, y: 3 } },
-  { id: 'w4', type: 'wall', pos: { x: 5, y: 5 } },
-  { id: 'w5', type: 'wall', pos: { x: 5, y: 6 } },
+const games = [
+  { id: 'debugrush', title: 'Найди ошибку', skill: 'Чтение ошибок', level: 'Начальный', duration: '4–6 минут', icon: Bug, description: 'Распознай причину ошибки и узнай, как её исправить.' },
+  { id: 'predictor', title: 'Что выведет код?', skill: 'Чтение кода', level: 'Начальный → средний', duration: '4–6 минут', icon: Eye, description: 'Проследи за значениями переменных и порядком действий.' },
+  { id: 'logicgates', title: 'Проверь условие', skill: 'Логика', level: 'Начальный', duration: '3–5 минут', icon: Code2, description: 'Разберись с and, or, not и сравнениями.' },
+  { id: 'pyarcade', title: 'Бот-кодер', skill: 'Настоящий Python', level: 'Начальный → средний', duration: '5–10 минут', icon: Bot, description: 'Напиши маршрут: команды, циклы и функции управляют ботом.' },
+  { id: 'syntaxmatch', title: 'Найди пару', skill: 'Синтаксис', level: 'Начальный', duration: '2–4 минуты', icon: Code2, description: 'Соедини понятие с примером Python.' },
+  { id: 'snake', title: 'Змейка: команды', skill: 'Последовательность', level: 'Начальный', duration: '3–5 минут', icon: Gamepad2, description: 'Планируй движение по шагам с ограниченным набором команд.' },
+  { id: 'regexracer', title: 'Регулярные выражения', skill: 'Поиск в строках', level: 'Средний', duration: '4–6 минут', icon: Code2, description: 'Подбери шаблон и проверь границы совпадения.' },
+  { id: 'algoascent', title: 'Сколько шагов?', skill: 'Алгоритмы', level: 'Средний', duration: '4–6 минут', icon: Code2, description: 'Сравни рост количества итераций.' },
+  { id: 'speedtyper', title: 'Набор кода Python', skill: 'Синтаксис и точность набора', level: 'Три уровня сложности', duration: '80 упражнений', icon: Keyboard, description: 'Набирай Python-код: от print() до небольших программ. 10 тем с сохранением прогресса.' },
+  { id: 'triviachase', title: 'Факты о Python', skill: 'Дополнительная разминка', level: 'Начальный', duration: '2–3 минуты', icon: Code2, description: 'Повтори термины и историю языка.' },
 ];
 
-const CODE_SNIPPETS = [
-  "def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)",
-  "class User:\n    def __init__(self, name):\n        self.name = name\n        self.is_active = True",
-  "import json\n\ndata = {'key': 'value'}\njson_str = json.dumps(data)",
-  "numbers = [1, 2, 3, 4, 5]\nsquares = [n**2 for n in numbers if n % 2 == 0]",
-  "try:\n    result = 10 / 0\nexcept ZeroDivisionError:\n    print('Cannot divide by zero!')"
-];
-
-const DEBUG_QUESTIONS = [
-  {
-    code: "def greet(name):\nprint('Hello ' + name)",
-    options: ["Пропущен двоеточие", "Ошибка отступа (Indentation)", "Ошибка имени", "Синтаксическая ошибка"],
-    correct: 1,
-    explanation: "В Python тело функции должно иметь отступ."
-  },
-  {
-    code: "if x = 10:\n    print('Ten')",
-    options: ["x не определен", "Используйте == для сравнения", "Пропущены кавычки", "Неверный print"],
-    correct: 1,
-    explanation: "Одиночное '=' используется для присваивания, '==' — для сравнения."
-  },
-  {
-    code: "my_list = [1, 2, 3]\nprint(my_list[3])",
-    options: ["Индекс вне диапазона", "Список пуст", "Неверный синтаксис", "Ошибка типа"],
-    correct: 0,
-    explanation: "Индексация начинается с 0. В списке из 3 элементов максимальный индекс — 2."
-  },
-  {
-    code: "for i in range(5)\n    print(i)",
-    options: ["range() не определен", "Пропущено двоеточие", "Неверный цикл", "Ошибка отступа"],
-    correct: 1,
-    explanation: "После объявления цикла 'for' обязательно должно стоять двоеточие."
+export function Arcade() {
+  const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const requestedGame = params.get('game');
+  const activeGame = games.find(game => game.id === requestedGame);
+  const openGame = (id: string) => id === 'speedtyper' ? navigate('/typing') : setParams({ game: id });
+  const closeGame = () => setParams({});
+  if (requestedGame === 'speedtyper') return <Navigate to="/typing" replace />;
+  // Older links to embedded tools now open their existing, single implementation.
+  if (requestedGame === 'duel' || requestedGame === 'sandbox') {
+    return <div className="mx-auto max-w-3xl px-4 pb-12 pt-28"><h1 className="mb-4 text-3xl font-bold">{requestedGame === 'duel' ? 'Дуэли' : 'Песочница'}</h1><Link className={primaryButton} to={requestedGame === 'duel' ? '/duels' : '/sandbox'}>Открыть раздел <ArrowRight size={18} /></Link><button className={`${button} ml-3`} onClick={closeGame}>Каталог игр</button></div>;
   }
-];
-
-const PREDICT_QUESTIONS = [
-  {
-    code: "x = [1, 2, 3]\ny = x\ny.append(4)\nprint(len(x))",
-    options: ["3", "4", "5", "Ошибка"],
-    correct: 1,
-    explanation: "Списки в Python передаются по ссылке. Изменение y меняет и x."
-  },
-  {
-    code: "a = 5\nb = 10\na, b = b, a\nprint(a)",
-    options: ["5", "10", "None", "Ошибка"],
-    correct: 1,
-    explanation: "Конструкция a, b = b, a меняет значения переменных местами."
-  },
-  {
-    code: "print('Python'[1:4])",
-    options: ["Pyth", "yth", "ytho", "Pyt"],
-    correct: 1,
-    explanation: "Срез [1:4] берет символы с индексами 1, 2 и 3 (y, t, h)."
-  },
-  {
-    code: "d = {'a': 1, 'b': 2}\nprint(d.get('c', 3))",
-    options: ["1", "2", "3", "None"],
-    correct: 2,
-    explanation: "Метод get() возвращает значение по умолчанию (3), если ключ не найден."
-  }
-];
-
-const REGEX_QUESTIONS = [
-  { q: "Найдите все цифры в строке 'user123'", p: "\\d+", options: ["\\d+", "\\w+", "[a-z]", "\\s"], correct: 0 },
-  { q: "Найдите слово 'Python' (без учета регистра)", p: "(?i)python", options: ["python", "PYTHON", "(?i)python", "^python"], correct: 2 },
-  { q: "Найдите начало строки", p: "^", options: ["$", "^", ".", "*"], correct: 1 },
-  { q: "Найдите 3 буквы 'a' подряд", p: "a{3}", options: ["a3", "a{3}", "a+", "a*"], correct: 1 }
-];
-
-const ALGO_QUESTIONS = [
-  { code: "def func(n):\n  for i in range(n):\n    print(i)", complexity: "O(n)", options: ["O(1)", "O(n)", "O(n²)", "O(log n)"], correct: 1 },
-  { code: "def func(n):\n  return n * n", complexity: "O(1)", options: ["O(1)", "O(n)", "O(n²)", "O(log n)"], correct: 0 },
-  { code: "def func(n):\n  for i in range(n):\n    for j in range(n):\n      print(i, j)", complexity: "O(n²)", options: ["O(1)", "O(n)", "O(n²)", "O(log n)"], correct: 2 },
-  { code: "def func(n):\n  i = n\n  while i > 1:\n    i //= 2", complexity: "O(log n)", options: ["O(1)", "O(n)", "O(n²)", "O(log n)"], correct: 3 }
-];
-
-const TRIVIA_QUESTIONS = [
-  { q: "Кто создал Python?", options: ["Деннис Ритчи", "Бьерн Страуструп", "Гвидо ван Россум", "Линус Торвальдс"], correct: 2 },
-  { q: "В каком году появился Python?", options: ["1989", "1991", "1995", "2000"], correct: 1 },
-  { q: "Какое ключевое слово используется для создания функций?", options: ["func", "function", "def", "lambda"], correct: 2 },
-  { q: "Что выведет bool([])?", options: ["True", "False", "None", "Error"], correct: 1 }
-];
-
-export const Arcade = () => {
-  const { claimArcadeReward } = useAuth();
-  const [activeGame, setActiveGame] = useState<'pyarcade' | 'speedtyper' | 'logicgates' | 'syntaxmatch' | 'snake' | 'debugrush' | 'predictor' | 'duel' | 'sandbox' | 'regexracer' | 'algoascent' | 'triviachase'>('pyarcade');
-  const [isSwitching, setIsSwitching] = useState(false);
-
-  const handleGameSwitch = (game: typeof activeGame) => {
-    if (game === activeGame) return;
-    setIsSwitching(true);
-    playSound('click');
-    setTimeout(() => {
-      setActiveGame(game);
-      setIsSwitching(false);
-    }, 600);
-  };
-
-  
-  const [entities, setEntities] = useState<Entity[]>(INITIAL_ENTITIES);
-  const [code, setCode] = useState("for i in range(3):\n    move_right()\n\nmove_down()\nattack()");
-  const [output, setOutput] = useState<string[]>(['System initialized. Waiting for commands...']);
-  const [isRunning, setIsRunning] = useState(false);
-  const [score, setScore] = useState(0);
-  const [gameOver, setGameOver] = useState(false);
-  const [gameWon, setGameWon] = useState(false);
-  const [playerAction, setPlayerAction] = useState<'idle' | 'attack' | 'hit'>('idle');
-
-  
-  const [snippetIndex, setSnippetIndex] = useState(0);
-  const [typedCode, setTypedCode] = useState("");
-  const [startTime, setStartTime] = useState<number | null>(null);
-  const [wpm, setWpm] = useState(0);
-  const [typerFinished, setTyperFinished] = useState(false);
-
-  
-  const [logicScore, setLogicScore] = useState(0);
-  const [currentLogicQuestion, setCurrentLogicQuestion] = useState(0);
-  const [logicGameOver, setLogicGameOver] = useState(false);
-  const [logicFlash, setLogicFlash] = useState<'success' | 'error' | null>(null);
-  const logicQuestions = [
-    { q: "True and False", a: false },
-    { q: "not False", a: true },
-    { q: "True or False", a: true },
-    { q: "not (True and True)", a: false },
-    { q: "(True or False) and True", a: true },
-    { q: "10 > 5 and 5 < 2", a: false },
-    { q: "'Python' == 'python'", a: false },
-    { q: "len([1, 2, 3]) == 3", a: true },
-    { q: "not (10 == 10)", a: false },
-    { q: "True and (False or True)", a: true }
-  ];
-
-  
-  type Card = { id: number; content: string; type: 'concept' | 'syntax'; pairId: number; isFlipped: boolean; isMatched: boolean };
-  const initialCards: Omit<Card, 'id' | 'isFlipped' | 'isMatched'>[] = [
-    { content: 'Список', type: 'concept', pairId: 1 },
-    { content: '[1, 2, 3]', type: 'syntax', pairId: 1 },
-    { content: 'Словарь', type: 'concept', pairId: 2 },
-    { content: '{"key": "value"}', type: 'syntax', pairId: 2 },
-    { content: 'Функция', type: 'concept', pairId: 3 },
-    { content: 'def my_func():', type: 'syntax', pairId: 3 },
-    { content: 'Строка', type: 'concept', pairId: 4 },
-    { content: '"Hello"', type: 'syntax', pairId: 4 },
-    { content: 'Целое число', type: 'concept', pairId: 5 },
-    { content: '42', type: 'syntax', pairId: 5 },
-    { content: 'Булево', type: 'concept', pairId: 6 },
-    { content: 'True', type: 'syntax', pairId: 6 },
-  ];
-
-  const [cards, setCards] = useState<Card[]>([]);
-  const [flippedCards, setFlippedCards] = useState<number[]>([]);
-  const [matchScore, setMatchScore] = useState(0);
-  const [matchGameOver, setMatchGameOver] = useState(false);
-  const [matchFlash, setMatchFlash] = useState<'success' | 'error' | null>(null);
-
-  
-  const [debugIndex, setDebugIndex] = useState(0);
-  const [debugScore, setDebugScore] = useState(0);
-  const [debugGameOver, setDebugGameOver] = useState(false);
-  const [debugFlash, setDebugFlash] = useState<'success' | 'error' | null>(null);
-
-  
-  const [predictIndex, setPredictIndex] = useState(0);
-  const [predictScore, setPredictScore] = useState(0);
-  const [predictGameOver, setPredictGameOver] = useState(false);
-  const [predictFlash, setPredictFlash] = useState<'success' | 'error' | null>(null);
-
-  
-  const [regexIndex, setRegexIndex] = useState(0);
-  const [regexScore, setRegexScore] = useState(0);
-  const [regexGameOver, setRegexGameOver] = useState(false);
-  const [regexFlash, setRegexFlash] = useState<'success' | 'error' | null>(null);
-
-  
-  const [algoIndex, setAlgoIndex] = useState(0);
-  const [algoScore, setAlgoScore] = useState(0);
-  const [algoGameOver, setAlgoGameOver] = useState(false);
-  const [algoFlash, setAlgoFlash] = useState<'success' | 'error' | null>(null);
-
-  
-  const [triviaIndex, setTriviaIndex] = useState(0);
-  const [triviaScore, setTriviaScore] = useState(0);
-  const [triviaGameOver, setTriviaGameOver] = useState(false);
-  const [triviaFlash, setTriviaFlash] = useState<'success' | 'error' | null>(null);
-
-  const initMatchGame = () => {
-    const shuffled = [...initialCards]
-      .sort(() => Math.random() - 0.5)
-      .map((card, index) => ({ ...card, id: index, isFlipped: false, isMatched: false }));
-    setCards(shuffled);
-    setFlippedCards([]);
-    setMatchScore(0);
-    setMatchGameOver(false);
-    playSound('click');
-  };
-
-  useEffect(() => {
-    if (activeGame === 'syntaxmatch' && cards.length === 0) {
-      initMatchGame();
-    }
-  }, [activeGame]);
-
-  const handleCardClick = (id: number) => {
-    if (flippedCards.length === 2 || cards.find(c => c.id === id)?.isFlipped || cards.find(c => c.id === id)?.isMatched) return;
-
-    playSound('click');
-    const newFlipped = [...flippedCards, id];
-    setFlippedCards(newFlipped);
-
-    setCards(cards.map(c => c.id === id ? { ...c, isFlipped: true } : c));
-
-    if (newFlipped.length === 2) {
-      const card1 = cards.find(c => c.id === newFlipped[0]);
-      const card2 = cards.find(c => c.id === id);
-
-      if (card1 && card2 && card1.pairId === card2.pairId) {
-        setMatchFlash('success');
-        setTimeout(() => {
-          playSound('success');
-          setCards(prev => prev.map(c => c.id === card1.id || c.id === card2.id ? { ...c, isMatched: true } : c));
-          setFlippedCards([]);
-          setMatchScore(prev => prev + 20);
-          setMatchFlash(null);
-          
-          
-          if (cards.filter(c => c.isMatched).length === cards.length - 2) {
-            setMatchGameOver(true);
-            playSound('levelUp');
-            void claimArcadeReward('syntaxmatch');
-          }
-        }, 500);
-      } else {
-        setMatchFlash('error');
-        setTimeout(() => {
-          playSound('error');
-          setCards(prev => prev.map(c => c.id === card1?.id || c.id === card2?.id ? { ...c, isFlipped: false } : c));
-          setFlippedCards([]);
-          setMatchFlash(null);
-        }, 1000);
-      }
-    }
-  };
-
-  const handleLogicAnswer = (answer: boolean) => {
-    const isCorrect = answer === logicQuestions[currentLogicQuestion].a;
-    
-    if (isCorrect) {
-      playSound('success');
-      setLogicScore(prev => prev + 10);
-      setLogicFlash('success');
-    } else {
-      playSound('error');
-      setLogicFlash('error');
-    }
-    
-    setTimeout(() => {
-      setLogicFlash(null);
-      if (currentLogicQuestion < logicQuestions.length - 1) {
-        setCurrentLogicQuestion(prev => prev + 1);
-      } else {
-        setLogicGameOver(true);
-        playSound('levelUp');
-        void claimArcadeReward('logicgates');
-      }
-    }, 500);
-  };
-
-  const resetLogicGame = () => {
-    playSound('click');
-    setLogicScore(0);
-    setCurrentLogicQuestion(0);
-    setLogicGameOver(false);
-  };
-
-  
-  const handleDebugAnswer = (index: number) => {
-    if (debugGameOver) return;
-    const isCorrect = index === DEBUG_QUESTIONS[debugIndex].correct;
-    
-    if (isCorrect) {
-      playSound('success');
-      setDebugScore(prev => prev + 25);
-      setDebugFlash('success');
-    } else {
-      playSound('error');
-      setDebugFlash('error');
-    }
-
-    setTimeout(() => {
-      setDebugFlash(null);
-      if (debugIndex < DEBUG_QUESTIONS.length - 1) {
-        setDebugIndex(prev => prev + 1);
-      } else {
-        setDebugGameOver(true);
-        playSound('levelUp');
-        void claimArcadeReward('debugrush');
-      }
-    }, 800);
-  };
-
-  const resetDebugGame = () => {
-    playSound('click');
-    setDebugIndex(0);
-    setDebugScore(0);
-    setDebugGameOver(false);
-  };
-
-  
-  const handlePredictAnswer = (index: number) => {
-    if (predictGameOver) return;
-    const isCorrect = index === PREDICT_QUESTIONS[predictIndex].correct;
-    
-    if (isCorrect) {
-      playSound('success');
-      setPredictScore(prev => prev + 30);
-      setPredictFlash('success');
-    } else {
-      playSound('error');
-      setPredictFlash('error');
-    }
-
-    setTimeout(() => {
-      setPredictFlash(null);
-      if (predictIndex < PREDICT_QUESTIONS.length - 1) {
-        setPredictIndex(prev => prev + 1);
-      } else {
-        setPredictGameOver(true);
-        playSound('levelUp');
-        void claimArcadeReward('predictor');
-      }
-    }, 800);
-  };
-
-  const resetPredictGame = () => {
-    playSound('click');
-    setPredictIndex(0);
-    setPredictScore(0);
-    setPredictGameOver(false);
-  };
-
-  
-  const handleRegexAnswer = (index: number) => {
-    if (regexGameOver) return;
-    const isCorrect = index === REGEX_QUESTIONS[regexIndex].correct;
-    if (isCorrect) { playSound('success'); setRegexScore(s => s + 40); setRegexFlash('success'); }
-    else { playSound('error'); setRegexFlash('error'); }
-    setTimeout(() => {
-      setRegexFlash(null);
-      if (regexIndex < REGEX_QUESTIONS.length - 1) setRegexIndex(s => s + 1);
-      else { setRegexGameOver(true); playSound('levelUp'); void claimArcadeReward('regexracer'); }
-    }, 800);
-  };
-
-  const handleAlgoAnswer = (index: number) => {
-    if (algoGameOver) return;
-    const isCorrect = index === ALGO_QUESTIONS[algoIndex].correct;
-    if (isCorrect) { playSound('success'); setAlgoScore(s => s + 50); setAlgoFlash('success'); }
-    else { playSound('error'); setAlgoFlash('error'); }
-    setTimeout(() => {
-      setAlgoFlash(null);
-      if (algoIndex < ALGO_QUESTIONS.length - 1) setAlgoIndex(s => s + 1);
-      else { setAlgoGameOver(true); playSound('levelUp'); void claimArcadeReward('algoascent'); }
-    }, 800);
-  };
-
-  const handleTriviaAnswer = (index: number) => {
-    if (triviaGameOver) return;
-    const isCorrect = index === TRIVIA_QUESTIONS[triviaIndex].correct;
-    if (isCorrect) { playSound('success'); setTriviaScore(s => s + 20); setTriviaFlash('success'); }
-    else { playSound('error'); setTriviaFlash('error'); }
-    setTimeout(() => {
-      setTriviaFlash(null);
-      if (triviaIndex < TRIVIA_QUESTIONS.length - 1) setTriviaIndex(s => s + 1);
-      else { setTriviaGameOver(true); playSound('levelUp'); void claimArcadeReward('triviachase'); }
-    }, 800);
-  };
-
-  const resetNewGames = () => {
-    playSound('click');
-    setRegexIndex(0); setRegexScore(0); setRegexGameOver(false);
-    setAlgoIndex(0); setAlgoScore(0); setAlgoGameOver(false);
-    setTriviaIndex(0); setTriviaScore(0); setTriviaGameOver(false);
-  };
-
-  
-  const runCode = async () => {
-    if (isRunning || gameOver || gameWon) return;
-    setIsRunning(true);
-    playSound('click');
-    setOutput(['> Executing script...']);
-    
-    let currentEntities = [...entities];
-    let currentScore = score;
-    
-    const lines = code.split('\n').map(l => l.trim()).filter(l => l);
-    const commands: string[] = [];
-    
-    let inLoop = false;
-    let loopCount = 0;
-    let loopCommands: string[] = [];
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.startsWith('for ') && line.includes('range(')) {
-        const match = line.match(/range\((\d+)\)/);
-        if (match) {
-          loopCount = parseInt(match[1]);
-          inLoop = true;
-          continue;
-        }
-      }
-      
-      if (inLoop) {
-        if (line === '' || !code.split('\n')[i].startsWith('    ')) {
-          for (let j = 0; j < loopCount; j++) {
-            commands.push(...loopCommands);
-          }
-          inLoop = false;
-          loopCommands = [];
-          commands.push(line);
-        } else {
-          loopCommands.push(line);
-        }
-      } else {
-        commands.push(line);
-      }
-    }
-    
-    if (inLoop) {
-      for (let j = 0; j < loopCount; j++) {
-        commands.push(...loopCommands);
-      }
-    }
-    
-    for (const cmd of commands) {
-      if (gameOver || gameWon) break;
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      let playerIndex = currentEntities.findIndex(e => e.type === 'player');
-      if (playerIndex === -1) break;
-      let player = { ...currentEntities[playerIndex] };
-      
-      let newPos = { ...player.pos };
-      let actionMsg = '';
-
-      if (cmd === 'move_up()') { newPos.y -= 1; actionMsg = 'Moved Up'; }
-      else if (cmd === 'move_down()') { newPos.y += 1; actionMsg = 'Moved Down'; }
-      else if (cmd === 'move_left()') { newPos.x -= 1; actionMsg = 'Moved Left'; }
-      else if (cmd === 'move_right()') { newPos.x += 1; actionMsg = 'Moved Right'; }
-      else if (cmd === 'attack()') {
-        setPlayerAction('attack');
-        playSound('click');
-        setTimeout(() => setPlayerAction('idle'), 300);
-        const adjacentSlimes = currentEntities.filter(e => 
-          e.type === 'slime' && 
-          Math.abs(e.pos.x - player.pos.x) + Math.abs(e.pos.y - player.pos.y) === 1
-        );
-        
-        if (adjacentSlimes.length > 0) {
-          actionMsg = 'Attacked and destroyed slime!';
-          playSound('success');
-          currentEntities = currentEntities.filter(e => e.id !== adjacentSlimes[0].id);
-          currentScore += 50;
-        } else {
-          actionMsg = 'Attacked nothing.';
-        }
-      } else {
-        actionMsg = `Unknown command: ${cmd}`;
-      }
-
-      if (cmd.startsWith('move_')) {
-        if (newPos.x < 0 || newPos.x >= GRID_SIZE || newPos.y < 0 || newPos.y >= GRID_SIZE) {
-          actionMsg = 'Hit boundary wall!';
-          playSound('error');
-        } else {
-          const cellEntity = currentEntities.find(e => e.pos.x === newPos.x && e.pos.y === newPos.y);
-          if (cellEntity) {
-            if (cellEntity.type === 'wall') {
-              actionMsg = 'Hit a wall!';
-              playSound('error');
-            } else if (cellEntity.type === 'slime') {
-              actionMsg = 'Ouch! Hit a slime!';
-              playSound('error');
-              setPlayerAction('hit');
-              setTimeout(() => setPlayerAction('idle'), 300);
-              player.hp = (player.hp || 1) - 1;
-              if (player.hp <= 0) {
-                setGameOver(true);
-                playSound('error');
-                actionMsg = 'Game Over! You died.';
-              }
-            } else if (cellEntity.type === 'gem') {
-              actionMsg = 'Collected a gem! +100 XP';
-              playSound('success');
-              currentScore += 100;
-              currentEntities = currentEntities.filter(e => e.id !== cellEntity.id);
-              player.pos = newPos;
-            }
-          } else {
-            player.pos = newPos;
-          }
-        }
-      }
-
-      currentEntities[playerIndex] = player;
-      setEntities([...currentEntities]);
-      setScore(currentScore);
-      setOutput(prev => [...prev, `> ${cmd} -> ${actionMsg}`]);
-      
-      if (!currentEntities.some(e => e.type === 'gem')) {
-        setGameWon(true);
-        playSound('levelUp');
-        setOutput(prev => [...prev, '> SUCCESS: All gems collected!']);
-        void claimArcadeReward('pyarcade');
-        break;
-      }
-    }
-    
-    setIsRunning(false);
-  };
-
-  const resetGame = () => {
-    playSound('click');
-    setEntities(INITIAL_ENTITIES);
-    setScore(0);
-    setGameOver(false);
-    setGameWon(false);
-    setOutput(['System reset. Ready.']);
-  };
-
-  
-  const handleType = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    if (!startTime && val.length > 0) {
-      setStartTime(Date.now());
-    }
-    setTypedCode(val);
-
-    if (val === CODE_SNIPPETS[snippetIndex]) {
-      const timeTaken = (Date.now() - (startTime || Date.now())) / 1000 / 60; 
-      const words = val.length / 5;
-      const calculatedWpm = Math.round(words / timeTaken);
-      setWpm(calculatedWpm);
-      setTyperFinished(true);
-      playSound('levelUp');
-      void claimArcadeReward('speedtyper');
-    }
-  };
-
-  const nextSnippet = () => {
-    playSound('click');
-    setSnippetIndex((prev) => (prev + 1) % CODE_SNIPPETS.length);
-    setTypedCode("");
-    setStartTime(null);
-    setTyperFinished(false);
-    setWpm(0);
-  };
-
-  const renderTyperText = () => {
-    const target = CODE_SNIPPETS[snippetIndex];
-    return target.split('').map((char, i) => {
-      let color = 'text-white/40';
-      let glow = '';
-      if (i < typedCode.length) {
-        if (typedCode[i] === char) {
-          color = 'text-emerald-400';
-          glow = 'drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]';
-        } else {
-          color = 'text-red-400 bg-red-400/20';
-        }
-      }
-      return <span key={i} className={`${color} ${glow} transition-colors duration-75`}>{char}</span>;
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-transparent text-white pt-40 pb-20 px-6 font-mono">
-      
-      <div className="max-w-7xl mx-auto">
-        {}
-        <div className="mb-16 grid md:grid-cols-3 gap-8 items-center">
-          <div className="md:col-span-1">
-            <PetCompanion />
+    <div className="mx-auto w-full max-w-6xl px-4 pb-12 pt-24 sm:px-6">
+      {activeGame ? (
+        <>
+          <button onClick={closeGame} className={`${button} mb-5`}><ArrowLeft size={18} /> Все игры</button>
+          <header className="mb-6 max-w-3xl">
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{activeGame.title}</h1>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">{activeGame.skill} · {activeGame.level} · {activeGame.duration}</p>
+          </header>
+          <div key={activeGame.id}>
+            {QUIZZES[activeGame.id] && <QuizGame gameId={activeGame.id} />}
+            {activeGame.id === 'pyarcade' && <RobotGame />}
+            {activeGame.id === 'syntaxmatch' && <MatchGame />}
+            {activeGame.id === 'snake' && <SnakeGame />}
           </div>
-          <div className="md:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="glass p-12 rounded-[40px] border border-white/10 relative overflow-hidden h-full flex flex-col justify-center"
-            >
-              <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-brand-primary/10 blur-[100px] rounded-full" />
-              <h2 className="text-4xl font-bold mb-4 italic serif tracking-tight">
-                <TextReveal text="Твой цифровой напарник" delay={0.1} />
-              </h2>
-              <p className="text-white/40 text-lg leading-relaxed">
-                <TextReveal text="Заботься о своем питомце, решая задачи и играя в игры. Чем больше ты учишься, тем сильнее и умнее становится твой друг!" delay={0.3} />
-              </p>
-            </motion.div>
+        </>
+      ) : (
+        <>
+          <header className="mb-8 max-w-2xl">
+            <h1 className="text-4xl font-bold tracking-tight text-white">Игры для практики Python</h1>
+            <p className="mt-4 text-base leading-relaxed text-slate-300">Выбери навык для короткой тренировки. Ошибки сопровождаются объяснениями. Результаты игр не означают освоение урока и не участвуют в рейтинге.</p>
+          </header>
+          <GameList items={games.slice(0, 4)} onOpen={openGame} />
+          <h2 className="mb-3 mt-10 text-xl font-bold text-white">Дополнительные упражнения</h2>
+          <GameList items={games.slice(4)} onOpen={openGame} />
+          <div className="mt-8 flex flex-wrap gap-3 border-t border-white/15 pt-6">
+            <Link to="/sandbox" className={button}>Песочница <ArrowRight size={16} /></Link>
+            <Link to="/tournaments" className={button}>Тренировочные серии <ArrowRight size={16} /></Link>
+            <Link to="/duels" className={button}>Дуэли <ArrowRight size={16} /></Link>
           </div>
-        </div>
-
-        {}
-        <div className="flex justify-center gap-4 mb-12 flex-wrap">
-          <MagneticButton 
-            onClick={() => handleGameSwitch('pyarcade')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'pyarcade' ? 'bg-brand-primary text-white shadow-[0_0_20px_rgba(45,212,191,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'pyarcade' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />} Бот-Кодер
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('debugrush')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'debugrush' ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'debugrush' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bug className="w-5 h-5" />} Debug Rush
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('predictor')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'predictor' ? 'bg-teal-500 text-white shadow-[0_0_20px_rgba(45,212,191,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'predictor' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Eye className="w-5 h-5" />} Predictor
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('speedtyper')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'speedtyper' ? 'bg-brand-secondary text-white shadow-[0_0_20px_rgba(251,191,36,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'speedtyper' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Keyboard className="w-5 h-5" />} Python-Спринтер
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('logicgates')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'logicgates' ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'logicgates' ? <Loader2 className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />} Булева Логика
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('syntaxmatch')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'syntaxmatch' ? 'bg-teal-500 text-white shadow-[0_0_20px_rgba(45,212,191,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'syntaxmatch' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Blocks className="w-5 h-5" />} Синтаксис-Пары
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('snake')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'snake' ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'snake' ? <Loader2 className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5" />} Python Snake
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('duel')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'duel' ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'duel' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />} Дуэли
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('regexracer')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'regexracer' ? 'bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'regexracer' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />} RegEx Racer
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('algoascent')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'algoascent' ? 'bg-teal-500 text-white shadow-[0_0_20px_rgba(20,184,166,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'algoascent' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />} Big O Ascent
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('triviachase')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'triviachase' ? 'bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'triviachase' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Star className="w-5 h-5" />} Python Trivia
-          </MagneticButton>
-          <MagneticButton 
-            onClick={() => handleGameSwitch('sandbox')}
-            disabled={isSwitching}
-            className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all ${activeGame === 'sandbox' ? 'bg-emerald-600 text-white shadow-[0_0_20px_rgba(13,148,136,0.4)]' : 'glass text-white/60 hover:text-white'}`}
-          >
-            {isSwitching && activeGame === 'sandbox' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Code2 className="w-5 h-5" />} Песочница
-          </MagneticButton>
-        </div>
-
-        {activeGame === 'pyarcade' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-              <div>
-                <h1 className="text-5xl font-display font-bold mb-2 flex items-center gap-4 text-emerald-400">
-                  <Code2 className="w-10 h-10" />
-                  <TextReveal text="ПиАркада" delay={0.1} />
-                </h1>
-                <p className="text-white/50">Пишите код на Python, чтобы управлять ботом. Соберите все камни для победы.</p>
-              </div>
-              <div className="flex gap-6 bg-white/5 p-4 rounded-2xl border border-white/10">
-                <div className="text-center">
-                  <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Счет</div>
-                  <div className="text-2xl font-bold text-amber-400">{score}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Здоровье</div>
-                  <div className="text-2xl font-bold text-red-400 flex gap-1 justify-center">
-                    {[...Array(entities.find(e => e.type === 'player')?.hp || 0)].map((_, i) => (
-                      <span key={i}>♥</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid lg:grid-cols-12 gap-8">
-              {}
-              <div className="lg:col-span-7">
-                <div className={`glass rounded-[30px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10] ${playerAction === 'hit' ? 'animate-shake' : ''}`}>
-                  <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(52,211,153,0.02),rgba(45,212,191,0.06))] bg-[length:100%_4px,3px_100%] z-20 opacity-50" />
-                  
-                  <div 
-                    className="relative mx-auto bg-[#111] border-4 border-[#333] rounded-lg shadow-[0_0_50px_rgba(52,211,153,0.1)]"
-                    style={{ width: GRID_SIZE * CELL_SIZE, height: GRID_SIZE * CELL_SIZE }}
-                  >
-                    <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`, gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)` }}>
-                      {[...Array(GRID_SIZE * GRID_SIZE)].map((_, i) => (
-                        <div key={i} className="border border-white/5" />
-                      ))}
-                    </div>
-
-                    <AnimatePresence>
-                      {entities.map(entity => (
-                        <motion.div
-                          key={entity.id}
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={{ 
-                            scale: 1, 
-                            opacity: 1,
-                            x: entity.pos.x * CELL_SIZE,
-                            y: entity.pos.y * CELL_SIZE
-                          }}
-                          exit={{ scale: 0, opacity: 0 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                          className="absolute flex items-center justify-center z-10"
-                          style={{ width: CELL_SIZE, height: CELL_SIZE }}
-                        >
-                          {entity.type === 'player' && (
-                            <motion.div 
-                              animate={
-                                playerAction === 'attack' ? { scale: [1, 1.3, 1], rotate: [0, 20, -20, 0] } :
-                                playerAction === 'hit' ? { x: [-5, 5, -5, 5, 0], backgroundColor: ['#ef4444', '#10b981'] } :
-                                {}
-                              }
-                              transition={{ duration: 0.3 }}
-                              className="w-8 h-8 bg-emerald-500 rounded-sm shadow-[0_0_15px_#10b981] flex items-center justify-center text-black font-bold text-xs relative" style={{ imageRendering: 'pixelated' }}>
-                              <div className="w-full h-full relative z-10">
-                                <div className="absolute top-2 left-1.5 w-1.5 h-1.5 bg-black" />
-                                <div className="absolute top-2 right-1.5 w-1.5 h-1.5 bg-black" />
-                                <div className="absolute bottom-1.5 left-2 w-4 h-1 bg-black" />
-                              </div>
-                              {playerAction === 'attack' && (
-                                <motion.div 
-                                  initial={{ opacity: 1, scale: 0.5 }}
-                                  animate={{ opacity: 0, scale: 2.5 }}
-                                  transition={{ duration: 0.3 }}
-                                  className="absolute inset-0 border-2 border-white rounded-full z-0"
-                                />
-                              )}
-                            </motion.div>
-                          )}
-                          {entity.type === 'slime' && (
-                            <motion.div 
-                              animate={{ y: [0, -5, 0], scaleY: [1, 0.9, 1] }}
-                              transition={{ repeat: Infinity, duration: 1 }}
-                              className="w-8 h-8 bg-emerald-500 rounded-t-xl rounded-b-sm shadow-[0_0_15px_#10b981] flex items-center justify-center relative"
-                            >
-                              <div className="absolute top-2 left-1.5 w-1.5 h-1.5 bg-white rounded-full">
-                                <div className="w-0.5 h-0.5 bg-black ml-0.5 mt-0.5" />
-                              </div>
-                              <div className="absolute top-2 right-1.5 w-1.5 h-1.5 bg-white rounded-full">
-                                <div className="w-0.5 h-0.5 bg-black ml-0.5 mt-0.5" />
-                              </div>
-                            </motion.div>
-                          )}
-                          {entity.type === 'gem' && (
-                            <motion.div 
-                              animate={{ rotate: [0, 15, -15, 0], y: [0, -4, 0] }}
-                              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                              className="w-5 h-5 bg-amber-400 rotate-45 shadow-[0_0_15px_#fbbf24] relative"
-                            >
-                               <div className="absolute inset-1 bg-amber-200 opacity-50" />
-                            </motion.div>
-                          )}
-                          {entity.type === 'wall' && (
-                            <div className="w-full h-full bg-[#444] border-[3px] border-t-[#666] border-l-[#666] border-b-[#222] border-r-[#222] rounded-sm" />
-                          )}
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-
-                  <AnimatePresence>
-                    {gameOver && (
-                      <motion.div 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-red-900/80 z-30 flex flex-col items-center justify-center backdrop-blur-sm"
-                      >
-                        <Skull className="w-20 h-20 text-red-400 mb-4" />
-                        <h2 className="text-4xl font-bold text-white mb-6">ИГРА ОКОНЧЕНА</h2>
-                        <button onClick={resetGame} className="px-8 py-3 bg-white text-red-900 font-bold rounded-full hover:bg-gray-200 transition-colors">
-                          Попробовать снова
-                        </button>
-                      </motion.div>
-                    )}
-                    {gameWon && (
-                      <motion.div 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-emerald-900/80 z-30 flex flex-col items-center justify-center backdrop-blur-sm"
-                      >
-                        <Trophy className="w-20 h-20 text-amber-400 mb-4" />
-                        <h2 className="text-4xl font-bold text-white mb-2">УРОВЕНЬ ПРОЙДЕН!</h2>
-                        <p className="text-emerald-200 mb-6">+{score} XP получено</p>
-                        <button onClick={resetGame} className="px-8 py-3 bg-white text-emerald-900 font-bold rounded-full hover:bg-gray-200 transition-colors">
-                          Играть снова
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-
-              {}
-              <div className="lg:col-span-5 flex flex-col gap-6">
-                <div className="glass rounded-[30px] border border-white/10 overflow-hidden flex flex-col flex-1 bg-[#080d10]">
-                  <div className="bg-black/40 px-6 py-4 border-b border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Terminal className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-bold text-white/70">bot_script.py</span>
-                    </div>
-                    <div className="text-xs text-white/40">Доступно: move_up(), move_down(), move_left(), move_right(), attack()</div>
-                  </div>
-                  <textarea aria-label="Редактор кода"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    disabled={isRunning || gameOver || gameWon}
-                    className="flex-1 w-full bg-transparent p-6 font-mono text-sm text-emerald-400 focus:outline-none resize-none disabled:opacity-50"
-                    spellCheck="false"
-                  />
-                  <div className="p-4 border-t border-white/5 bg-black/40 flex gap-4">
-                    <button 
-                      onClick={runCode}
-                      disabled={isRunning || gameOver || gameWon}
-                      className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-black disabled:opacity-50 transition-colors rounded-xl font-bold flex items-center justify-center gap-2 relative overflow-hidden group"
-                    >
-                      <span className="absolute inset-0 w-full h-full bg-white/20 -translate-x-full group-hover:animate-shimmer" />
-                      <Play className="w-4 h-4" /> Выполнить
-                    </button>
-                    <button 
-                      onClick={resetGame}
-                      className="px-6 py-3 glass hover:bg-white/10 transition-colors rounded-xl font-bold flex items-center justify-center"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="glass rounded-[30px] border border-white/10 overflow-hidden bg-black/80 h-48 flex flex-col">
-                  <div className="px-6 py-3 border-b border-white/5 text-xs font-bold text-white/40 uppercase tracking-widest">
-                    Системный лог
-                  </div>
-                  <div className="p-6 font-mono text-xs text-white/60 overflow-y-auto flex-1 flex flex-col gap-1">
-                    {output.map((line, i) => (
-                      <div key={i} className={line.includes('SUCCESS') ? 'text-emerald-400' : line.includes('Error') || line.includes('Over') ? 'text-red-400' : ''}>
-                        {line}
-                      </div>
-                    ))}
-                    {isRunning && (
-                      <motion.div animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.8 }}>_</motion.div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {}
-        {activeGame === 'debugrush' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-display font-bold text-red-400 mb-2 flex items-center justify-center gap-4">
-                <Bug className="w-10 h-10" /> Debug Rush
-              </h2>
-              <p className="text-white/50 text-xl">Найдите ошибку в коде Python как можно быстрее.</p>
-            </div>
-
-            <div className={`glass rounded-[30px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10] min-h-[500px] flex flex-col transition-colors duration-300 ${debugFlash === 'success' ? 'bg-emerald-500/20' : debugFlash === 'error' ? 'bg-red-500/20 animate-shake' : ''}`}>
-              {}
-              {!debugGameOver && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-10">
-                  {[...Array(5)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      animate={{ 
-                        x: [Math.random() * 800, Math.random() * 800],
-                        y: [Math.random() * 500, Math.random() * 500],
-                        rotate: [0, 360],
-                        scale: [1, 1.5, 1],
-                        opacity: [0.1, 0.3, 0.1]
-                      }}
-                      transition={{ 
-                        duration: 2 + Math.random() * 3, 
-                        repeat: Infinity,
-                        repeatType: "mirror"
-                      }}
-                      className="absolute text-red-500"
-                    >
-                      <Bug className="w-24 h-24" />
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-
-              {!debugGameOver ? (
-                <>
-                  <div className="flex justify-between items-center mb-8">
-                    <div className="text-white/40 font-mono">Вопрос {debugIndex + 1} из {DEBUG_QUESTIONS.length}</div>
-                    <div className="text-2xl font-bold text-amber-400">{debugScore} XP</div>
-                  </div>
-
-                  <div className="bg-black/50 rounded-2xl p-6 font-mono text-lg mb-8 border border-white/5">
-                    <pre className="text-teal-300">
-                      {DEBUG_QUESTIONS[debugIndex].code}
-                    </pre>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {DEBUG_QUESTIONS[debugIndex].options.map((opt, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleDebugAnswer(i)}
-                        className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-red-500/50 transition-all text-left font-bold text-lg"
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center flex-grow text-center">
-                  <Trophy className="w-24 h-24 text-amber-500 mb-6" />
-                  <h3 className="text-4xl font-bold mb-2">Отличная отладка!</h3>
-                  <p className="text-white/60 text-xl mb-8">Вы заработали {debugScore} XP за исправление багов.</p>
-                  <button 
-                    onClick={resetDebugGame}
-                    className="px-10 py-4 bg-brand-primary rounded-2xl font-bold text-xl hover:scale-105 transition-transform"
-                  >
-                    Играть снова
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {}
-        {activeGame === 'predictor' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-display font-bold text-teal-400 mb-2 flex items-center justify-center gap-4">
-                <Eye className="w-10 h-10" /> Output Predictor
-              </h2>
-              <p className="text-white/50 text-xl">Предскажите, что выведет этот код Python.</p>
-            </div>
-
-            <div className={`glass rounded-[30px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10] min-h-[500px] flex flex-col transition-colors duration-300 ${predictFlash === 'success' ? 'bg-emerald-500/20' : predictFlash === 'error' ? 'bg-red-500/20 animate-shake' : ''}`}>
-              {!predictGameOver ? (
-                <>
-                  <div className="flex justify-between items-center mb-8">
-                    <div className="text-white/40 font-mono">Вопрос {predictIndex + 1} из {PREDICT_QUESTIONS.length}</div>
-                    <div className="text-2xl font-bold text-amber-400">{predictScore} XP</div>
-                  </div>
-
-                  <div className="bg-black/50 rounded-2xl p-6 font-mono text-lg mb-8 border border-white/5">
-                    <pre className="text-emerald-300">
-                      {PREDICT_QUESTIONS[predictIndex].code}
-                    </pre>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {PREDICT_QUESTIONS[predictIndex].options.map((opt, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handlePredictAnswer(i)}
-                        className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-teal-500/50 transition-all text-center font-bold text-xl"
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center flex-grow text-center">
-                  <Star className="w-24 h-24 text-amber-500 mb-6" />
-                  <h3 className="text-4xl font-bold mb-2">Мастер интерпретации!</h3>
-                  <p className="text-white/60 text-xl mb-8">Вы заработали {predictScore} XP за верные предсказания.</p>
-                  <button 
-                    onClick={resetPredictGame}
-                    className="px-10 py-4 bg-brand-primary rounded-2xl font-bold text-xl hover:scale-105 transition-transform"
-                  >
-                    Играть снова
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {activeGame === 'speedtyper' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h1 className="text-5xl font-display font-bold mb-4 flex items-center justify-center gap-4 text-brand-secondary">
-                <Keyboard className="w-10 h-10" />
-                <TextReveal text="Скоропечать" delay={0.1} />
-              </h1>
-              <p className="text-white/50 text-xl">Печатайте код на Python как можно быстрее, чтобы заработать XP.</p>
-            </div>
-
-            <div className="glass rounded-[30px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10]">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-brand-secondary/10 blur-[80px] rounded-full pointer-events-none" />
-              
-              <div className="relative z-10 mb-8 p-6 bg-black/50 rounded-2xl border border-white/5 font-mono text-lg leading-relaxed whitespace-pre-wrap">
-                {renderTyperText()}
-              </div>
-
-              <div className="relative z-10">
-                <textarea aria-label="Начните печатать здесь..."
-                  value={typedCode}
-                  onChange={handleType}
-                  disabled={typerFinished}
-                  className="w-full h-48 bg-white/5 border border-white/10 rounded-2xl p-6 font-mono text-lg text-white focus:outline-none focus:border-brand-secondary transition-colors resize-none disabled:opacity-50"
-                  placeholder="Начните печатать здесь..."
-                  spellCheck="false"
-                  autoFocus
-                />
-              </div>
-
-              <AnimatePresence>
-                {typerFinished && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="absolute inset-0 z-20 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center rounded-[30px]"
-                  >
-                    <Trophy className="w-20 h-20 text-amber-400 mb-6" />
-                    <h2 className="text-4xl font-bold mb-2">Сниппет завершен!</h2>
-                    <div className="flex gap-8 mb-8">
-                      <div className="text-center">
-                        <div className="text-white/40 text-sm uppercase tracking-widest mb-1">Скорость</div>
-                        <div className="text-4xl font-display font-bold text-brand-secondary">{wpm} <span className="text-xl">WPM</span></div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-white/40 text-sm uppercase tracking-widest mb-1">XP Получено</div>
-                        <div className="text-4xl font-display font-bold text-emerald-400">+{wpm}</div>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={nextSnippet}
-                      className="px-8 py-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full font-bold text-lg glow-shadow hover:scale-105 transition-all"
-                    >
-                      Следующий сниппет
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-
-        {activeGame === 'logicgates' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h1 className="text-5xl font-display font-bold mb-4 flex items-center justify-center gap-4 text-emerald-400">
-                <BrainCircuit className="w-10 h-10" />
-                <TextReveal text="Логика" delay={0.1} />
-              </h1>
-              <p className="text-white/50 text-xl">Правильно оценивайте булевы выражения Python, чтобы заработать XP.</p>
-            </div>
-
-            <div className={`glass rounded-[30px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10] min-h-[400px] flex flex-col items-center justify-center transition-colors duration-300 ${logicFlash === 'success' ? 'bg-emerald-500/20' : logicFlash === 'error' ? 'bg-red-500/20 animate-shake' : ''}`}>
-              <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-500/10 blur-[80px] rounded-full pointer-events-none" />
-              
-              {!logicGameOver ? (
-                <div className="relative z-10 w-full max-w-2xl text-center">
-                  <div className="text-white/40 text-sm uppercase tracking-widest mb-8">Вопрос {currentLogicQuestion + 1} из {logicQuestions.length}</div>
-                  
-                  <div className="p-8 bg-black/50 rounded-2xl border border-white/5 font-mono text-3xl md:text-4xl text-white mb-12 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                    {logicQuestions[currentLogicQuestion].q}
-                  </div>
-
-                  <div className="flex gap-6 justify-center">
-                    <button 
-                      onClick={() => handleLogicAnswer(true)}
-                      className="px-12 py-6 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-2xl font-bold text-2xl hover:bg-emerald-500/20 hover:scale-105 transition-all w-48"
-                    >
-                      True
-                    </button>
-                    <button 
-                      onClick={() => handleLogicAnswer(false)}
-                      className="px-12 py-6 bg-red-500/10 border border-red-500/30 text-red-400 rounded-2xl font-bold text-2xl hover:bg-red-500/20 hover:scale-105 transition-all w-48"
-                    >
-                      False
-                    </button>
-                  </div>
-                  
-                  <div className="mt-12 text-xl font-bold text-emerald-400">
-                    Счет: {logicScore}
-                  </div>
-                </div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="relative z-10 flex flex-col items-center justify-center text-center"
-                >
-                  <Trophy className="w-20 h-20 text-amber-400 mb-6" />
-                  <h2 className="text-4xl font-bold mb-2">Викторина завершена!</h2>
-                  <p className="text-white/50 text-xl mb-8">Вы набрали {logicScore} из {logicQuestions.length * 10}</p>
-                  
-                  <div className="text-center mb-8">
-                    <div className="text-white/40 text-sm uppercase tracking-widest mb-1">XP Получено</div>
-                    <div className="text-5xl font-display font-bold text-emerald-400">+{logicScore}</div>
-                  </div>
-
-                  <button 
-                    onClick={resetLogicGame}
-                    className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-full font-bold text-lg glow-shadow hover:scale-105 transition-all"
-                  >
-                    Играть снова
-                  </button>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {activeGame === 'syntaxmatch' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h1 className="text-5xl font-display font-bold mb-4 flex items-center justify-center gap-4 text-teal-400">
-                <Blocks className="w-10 h-10" />
-                <TextReveal text="Синтаксис" delay={0.1} />
-              </h1>
-              <p className="text-white/50 text-xl">Сопоставьте концепцию Python с ее синтаксисом, чтобы заработать XP.</p>
-            </div>
-
-            <div className={`glass rounded-[30px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10] min-h-[500px] flex flex-col items-center justify-center transition-colors duration-300 ${matchFlash === 'success' ? 'bg-emerald-500/20' : matchFlash === 'error' ? 'bg-red-500/20 animate-shake' : ''}`}>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 blur-[80px] rounded-full pointer-events-none" />
-              
-              {!matchGameOver ? (
-                <div className="relative z-10 w-full">
-                  <div className="flex justify-between items-center mb-8">
-                    <div className="text-white/40 text-sm uppercase tracking-widest">Счет</div>
-                    <div className="text-2xl font-bold text-teal-400">{matchScore}</div>
-                  </div>
-
-                  <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
-                    {cards.map(card => (
-                      <motion.div
-                        key={card.id}
-                        onClick={() => handleCardClick(card.id)}
-                        className={`relative w-full aspect-square cursor-pointer ${card.isMatched ? 'opacity-0 pointer-events-none' : ''}`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <motion.div
-                          className="w-full h-full absolute inset-0"
-                          initial={false}
-                          animate={{ rotateY: card.isFlipped ? 180 : 0 }}
-                          transition={{ duration: 0.4, type: 'spring', stiffness: 260, damping: 20 }}
-                          style={{ transformStyle: 'preserve-3d' }}
-                        >
-                          {}
-                          <div 
-                            className="absolute inset-0 w-full h-full bg-white/5 border border-white/10 rounded-xl flex items-center justify-center"
-                            style={{ backfaceVisibility: 'hidden' }}
-                          >
-                            <Blocks className="w-8 h-8 text-white/50" />
-                          </div>
-                          
-                          {}
-                          <div 
-                            className={`absolute inset-0 w-full h-full rounded-xl flex items-center justify-center p-4 text-center border shadow-[0_0_20px_rgba(45,212,191,0.2)] ${card.type === 'concept' ? 'bg-teal-500/20 border-teal-500/50 text-teal-200 font-bold' : 'bg-black/80 border-white/20 text-emerald-400 font-mono text-sm'}`}
-                            style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-                          >
-                            {card.content}
-                          </div>
-                        </motion.div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="relative z-10 flex flex-col items-center justify-center text-center"
-                >
-                  <Trophy className="w-20 h-20 text-amber-400 mb-6" />
-                  <h2 className="text-4xl font-bold mb-2">Мастер памяти!</h2>
-                  <p className="text-white/50 text-xl mb-8">Вы сопоставили все пары синтаксиса.</p>
-                  
-                  <div className="text-center mb-8">
-                    <div className="text-white/40 text-sm uppercase tracking-widest mb-1">XP Получено</div>
-                    <div className="text-5xl font-display font-bold text-emerald-400">+{matchScore}</div>
-                  </div>
-
-                  <button 
-                    onClick={initMatchGame}
-                    className="px-8 py-4 bg-teal-500 hover:bg-teal-400 text-white rounded-full font-bold text-lg glow-shadow hover:scale-105 transition-all"
-                  >
-                    Играть снова
-                  </button>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {activeGame === 'regexracer' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-display font-bold text-amber-400 mb-2 flex items-center justify-center gap-4">
-                <Search className="w-10 h-10" /> RegEx Racer
-              </h2>
-              <p className="text-white/50 text-xl">Выберите правильное регулярное выражение.</p>
-            </div>
-            <div className={`glass rounded-[30px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10] min-h-[400px] flex flex-col transition-colors duration-300 ${regexFlash === 'success' ? 'bg-emerald-500/20' : regexFlash === 'error' ? 'bg-red-500/20 animate-shake' : ''}`}>
-              {!regexGameOver ? (
-                <>
-                  <div className="flex justify-between items-center mb-8">
-                    <div className="text-white/40 font-mono">Вопрос {regexIndex + 1} из {REGEX_QUESTIONS.length}</div>
-                    <div className="text-2xl font-bold text-amber-400">{regexScore} XP</div>
-                  </div>
-                  <div className="bg-black/50 rounded-2xl p-8 font-mono text-2xl mb-8 border border-white/5 text-center text-amber-200 italic">
-                    {REGEX_QUESTIONS[regexIndex].q}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {REGEX_QUESTIONS[regexIndex].options.map((opt, i) => (
-                      <button key={i} onClick={() => handleRegexAnswer(i)} className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-amber-500/50 transition-all text-center font-bold text-xl font-mono text-amber-400">
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center flex-grow text-center">
-                  <Trophy className="w-24 h-24 text-amber-500 mb-6" />
-                  <h3 className="text-4xl font-bold mb-2">RegEx Мастер!</h3>
-                  <button onClick={resetNewGames} className="px-10 py-4 bg-brand-primary rounded-2xl font-bold text-xl mt-8">Играть снова</button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {activeGame === 'algoascent' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-display font-bold text-teal-400 mb-2 flex items-center justify-center gap-4">
-                <Zap className="w-10 h-10" /> Big O Ascent
-              </h2>
-              <p className="text-white/50 text-xl">Определите временную сложность алгоритма.</p>
-            </div>
-            <div className={`glass rounded-[30px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10] min-h-[500px] flex flex-col transition-colors duration-300 ${algoFlash === 'success' ? 'bg-emerald-500/20' : algoFlash === 'error' ? 'bg-red-500/20 animate-shake' : ''}`}>
-              {!algoGameOver ? (
-                <>
-                  <div className="flex justify-between items-center mb-8">
-                    <div className="text-white/40 font-mono">Вопрос {algoIndex + 1} из {ALGO_QUESTIONS.length}</div>
-                    <div className="text-2xl font-bold text-amber-400">{algoScore} XP</div>
-                  </div>
-                  <div className="bg-black/50 rounded-2xl p-6 font-mono text-sm mb-8 border border-white/5">
-                    <pre className="text-teal-300">{ALGO_QUESTIONS[algoIndex].code}</pre>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {ALGO_QUESTIONS[algoIndex].options.map((opt, i) => (
-                      <button key={i} onClick={() => handleAlgoAnswer(i)} className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-teal-500/50 transition-all text-center font-bold text-xl text-teal-400">
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center flex-grow text-center">
-                  <Star className="w-24 h-24 text-amber-500 mb-6" />
-                  <h3 className="text-4xl font-bold mb-2">Алгоритмист!</h3>
-                  <button onClick={resetNewGames} className="px-10 py-4 bg-brand-primary rounded-2xl font-bold text-xl mt-8">Играть снова</button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {activeGame === 'triviachase' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-display font-bold text-amber-400 mb-2 flex items-center justify-center gap-4">
-                <Star className="w-10 h-10" /> Python Trivia
-              </h2>
-              <p className="text-white/50 text-xl">Насколько хорошо вы знаете Python?</p>
-            </div>
-            <div className={`glass rounded-[30px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10] min-h-[400px] flex flex-col transition-colors duration-300 ${triviaFlash === 'success' ? 'bg-emerald-500/20' : triviaFlash === 'error' ? 'bg-red-500/20 animate-shake' : ''}`}>
-              {!triviaGameOver ? (
-                <>
-                  <div className="flex justify-between items-center mb-8">
-                    <div className="text-white/40 font-mono">Вопрос {triviaIndex + 1} из {TRIVIA_QUESTIONS.length}</div>
-                    <div className="text-2xl font-bold text-amber-400">{triviaScore} XP</div>
-                  </div>
-                  <div className="bg-black/50 rounded-2xl p-8 text-2xl mb-8 border border-white/5 text-center font-bold">
-                    {TRIVIA_QUESTIONS[triviaIndex].q}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {TRIVIA_QUESTIONS[triviaIndex].options.map((opt, i) => (
-                      <button key={i} onClick={() => handleTriviaAnswer(i)} className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-amber-500/50 transition-all text-center font-bold text-lg">
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center flex-grow text-center">
-                  <Trophy className="w-24 h-24 text-amber-500 mb-6" />
-                  <h3 className="text-4xl font-bold mb-2">Знаток Python!</h3>
-                  <button onClick={resetNewGames} className="px-10 py-4 bg-brand-primary rounded-2xl font-bold text-xl mt-8">Играть снова</button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {activeGame === 'snake' && <PythonSnakeGame />}
-        {activeGame === 'duel' && <Duel />}
-        {activeGame === 'sandbox' && <Sandbox />}
-      </div>
+        </>
+      )}
     </div>
   );
-};
+}
 
-const PythonSnakeGame = () => {
-  const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
-  const [food, setFood] = useState({ x: 5, y: 5 });
-  const [direction, setDirection] = useState({ x: 0, y: -1 });
-  const [gameOver, setGameOver] = useState(false);
-  const [score, setScore] = useState(0);
-  const [isPaused, setIsPaused] = useState(true);
-  const [snakeFlash, setSnakeFlash] = useState<'error' | null>(null);
-  const [command, setCommand] = useState("");
-  const [logs, setLogs] = useState<string[]>(["Система готова. Введите команду для змейки."]);
-  const { claimArcadeReward } = useAuth();
+function GameList({ items, onOpen }: { items: typeof games; onOpen: (id: string) => void }) {
+  return <div className="divide-y divide-white/15 border-y border-white/15">{items.map(game => <button key={game.id} onClick={() => onOpen(game.id)} className="group flex min-h-24 w-full items-center gap-4 px-1 py-5 text-left hover:bg-white/5 sm:px-3"><game.icon className="hidden shrink-0 text-emerald-300 sm:block" size={24} aria-hidden="true" /><div className="min-w-0 flex-1"><span className="block text-lg font-semibold text-white group-hover:text-emerald-300">{game.title}</span><span className="mt-1 block text-sm leading-relaxed text-slate-300">{game.description}</span><span className="mt-2 block text-xs leading-relaxed text-slate-400">{game.skill} · {game.level} · {game.duration}</span></div><ArrowRight className="shrink-0 text-emerald-300" size={20} aria-hidden="true" /></button>)}</div>;
+}
 
-  const gridSize = 20;
-
-  const handleCommand = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cmd = command.toLowerCase().trim();
-    setCommand("");
-
-    if (cmd === 'up' || cmd === 'snake.move_up()') {
-      if (direction.y === 0) setDirection({ x: 0, y: -1 });
-      setLogs(prev => [...prev, ">>> snake.move_up()"]);
-    } else if (cmd === 'down' || cmd === 'snake.move_down()') {
-      if (direction.y === 0) setDirection({ x: 0, y: 1 });
-      setLogs(prev => [...prev, ">>> snake.move_down()"]);
-    } else if (cmd === 'left' || cmd === 'snake.move_left()') {
-      if (direction.x === 0) setDirection({ x: -1, y: 0 });
-      setLogs(prev => [...prev, ">>> snake.move_left()"]);
-    } else if (cmd === 'right' || cmd === 'snake.move_right()') {
-      if (direction.x === 0) setDirection({ x: 1, y: 0 });
-      setLogs(prev => [...prev, ">>> snake.move_right()"]);
-    } else {
-      setLogs(prev => [...prev, `Error: Unknown command '${cmd}'`]);
-      playSound('error');
-    }
+function QuizGame({ gameId }: { gameId: string }) {
+  const game = QUIZZES[gameId];
+  const key = `studypy:quiz:v2:${gameId}`;
+  const [state, setState] = useState<QuizState>(() => readSaved(key, newQuiz(), (value): value is QuizState => {
+    if (!value || typeof value !== 'object') return false;
+    const item = value as QuizState;
+    return Number.isInteger(item.index) && item.index >= 0 && item.index < game.questions.length && typeof item.finished === 'boolean' && !!item.answers && typeof item.answers === 'object' && Object.entries(item.answers).every(([id, answer]) => game.questions.some(q => q.id === id && Number.isInteger(answer) && answer >= 0 && answer < q.options.length));
+  }));
+  const [saved, setSaved] = useState(true);
+  const question = game.questions[state.index];
+  const answer = state.answers[question.id];
+  const answerLock = useRef(answer !== undefined);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  const result = quizResult(state, game.questions);
+  useEffect(() => { setSaved(save(key, state)); answerLock.current = state.answers[game.questions[state.index].id] !== undefined; }, [key, state, game]);
+  const submit = (option: number) => {
+    if (answerLock.current) return;
+    answerLock.current = true;
+    setState(previous => answerQuiz(previous, game.questions, option));
+    window.requestAnimationFrame(() => feedbackRef.current?.focus());
   };
+  return <section className="max-w-4xl">
+    <p className="mb-5 max-w-3xl leading-relaxed text-slate-300">{game.goal} Выбери один ответ, прочитай объяснение и переходи дальше. Ограничения времени нет.</p>
+    {state.finished ? <div className={panel}>
+      <h2 className="text-2xl font-bold text-white">{result.title}</h2>
+      <p className="mt-3 text-lg text-emerald-300">Правильных ответов: {result.correct} из {result.total}. Ошибок: {result.mistakes.length}.</p>
+      {result.mistakes.length > 0 && <div className="mt-6 space-y-5"><h3 className="font-bold text-white">Разбор ошибок</h3>{result.mistakes.map(q => <article key={q.id} className="border-t border-white/15 pt-4"><p className="font-medium text-white">{q.prompt}</p>{q.code && <pre className="mt-2 overflow-x-auto text-sm text-slate-300">{q.code}</pre>}<p className="mt-2 text-sm text-rose-200">Твой ответ: {q.options[state.answers[q.id]]}</p><p className="mt-1 text-sm text-emerald-200">Верный ответ: {q.options[q.correct]}</p><p className="mt-2 text-sm leading-relaxed text-slate-300">{q.explanation}</p></article>)}</div>}
+      <p className="mt-6 leading-relaxed text-slate-300">{game.recommendation}</p>
+      <p className="mt-3 text-sm text-slate-400">{saved ? 'Результат этой тренировки сохранён в этом браузере.' : 'Браузер не разрешил сохранить результат. Он будет доступен до выхода с этой страницы.'}</p>
+      <div className="mt-6 flex flex-wrap gap-3"><button className={primaryButton} onClick={() => { answerLock.current = false; setState(newQuiz()); }}><RotateCcw size={16} /> Повторить серию</button><Link className={button} to="/sandbox">Открыть песочницу</Link></div>
+    </div> : <div className={panel}>
+      <p className="mb-4 text-sm text-slate-300">Вопрос {state.index + 1} из {game.questions.length}</p>
+      <h2 className="text-xl font-semibold text-white">{question.prompt}</h2>
+      {question.code && <pre className="my-5 overflow-x-auto rounded-lg bg-[#080f0d] p-4 text-sm leading-relaxed text-emerald-100"><code>{question.code}</code></pre>}
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">{question.options.map((option, index) => <button key={index} disabled={answer !== undefined} onClick={() => submit(index)} className={`${button} justify-start whitespace-pre-wrap text-left ${answer === index ? 'border-emerald-300 bg-emerald-400/10' : ''}`} aria-pressed={answer === index}>{answer !== undefined && index === question.correct ? <Check size={18} aria-hidden="true" /> : answer === index ? <X size={18} aria-hidden="true" /> : null}<span>{option}</span></button>)}</div>
+      {answer !== undefined && <div ref={feedbackRef} tabIndex={-1} className="mt-6 rounded-lg bg-[#080f0d] p-4 outline-none" role="status"><p className={`font-bold ${answer === question.correct ? 'text-emerald-300' : 'text-rose-200'}`}>{answer === question.correct ? 'Верно' : 'Пока неверно'}</p><p className="mt-2 leading-relaxed text-slate-200">{question.explanation}</p><button className={`${primaryButton} mt-4`} onClick={() => setState(previous => nextQuizQuestion(previous, game.questions))}>{state.index === game.questions.length - 1 ? 'Посмотреть итог' : 'Следующий вопрос'} <ArrowRight size={16} /></button></div>}
+    </div>}
+    <a className="mt-5 inline-block text-sm text-emerald-300 underline underline-offset-4" href={game.source} target="_blank" rel="noreferrer">Справка Python по теме</a>
+  </section>;
+}
 
-  useEffect(() => {
-    if (isPaused || gameOver) return;
+function RobotGame() {
+  const [levelIndex, setLevelIndex] = useState(0);
+  return <section><p className="mb-4 max-w-3xl leading-relaxed text-slate-300">Цель — составить программу и проверить маршрут. Код выполняется настоящим Python. Собери все кристаллы и дойди до финиша. На один запуск отведено до 40 перемещений. Для остановки есть отдельная кнопка.</p><div className="mb-5 flex flex-wrap gap-2" aria-label="Задания бота">{ROBOT_LEVELS.map((level, index) => <button key={level.id} className={`${button} ${levelIndex === index ? 'border-emerald-300 text-emerald-300' : ''}`} onClick={() => setLevelIndex(index)} aria-pressed={levelIndex === index}>{index + 1}. {level.title}</button>)}</div><RobotLevelGame key={ROBOT_LEVELS[levelIndex].id} levelIndex={levelIndex} onNext={() => setLevelIndex(index => Math.min(index + 1, ROBOT_LEVELS.length - 1))} /></section>;
+}
 
-    const moveSnake = () => {
-      const newSnake = [...snake];
-      const head = { x: newSnake[0].x + direction.x, y: newSnake[0].y + direction.y };
-
-      
-      if (head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize || newSnake.some(s => s.x === head.x && s.y === head.y)) {
-        setGameOver(true);
-        setSnakeFlash('error');
-        playSound('error');
-        setTimeout(() => setSnakeFlash(null), 500);
-        void claimArcadeReward('snake');
-        return;
-      }
-
-      newSnake.unshift(head);
-
-      if (head.x === food.x && head.y === food.y) {
-        setScore(s => s + 10);
-        setFood({ x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) });
-        playSound('success');
+function RobotLevelGame({ levelIndex, onNext }: { levelIndex: number; onNext: () => void }) {
+  const level = ROBOT_LEVELS[levelIndex];
+  const { code, setCode, saved } = useDraft(`studypy:robot:draft:${level.id}`, level.initialCode);
+  const initialState: RobotSnapshot = { position: [...level.start], gems: level.gems.map(point => [...point]), path: [[...level.start]] };
+  const [snapshot, setSnapshot] = useState<RobotSnapshot>(initialState);
+  const [step, setStep] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [feedback, setFeedback] = useState('Напиши маршрут и нажми «Запустить Python».');
+  const [output, setOutput] = useState('');
+  const [solved, setSolved] = useState(false);
+  const runRef = useRef<ReturnType<typeof startPythonRun> | null>(null);
+  useEffect(() => () => { runRef.current?.cancel(); runRef.current = null; }, []);
+  const run = async () => {
+    if (runRef.current) return;
+    setRunning(true); setSolved(false); setOutput(''); setSnapshot(initialState); setStep(0);
+    setFeedback('Загружаем и запускаем Python… Первый запуск требует загрузки среды.');
+    const execution = startPythonRun({ code, setup: robotSetup(level), expression: ROBOT_EXPRESSION, timeoutMs: 8000, onStatus: status => {
+      setFeedback(status === 'running' ? 'Python выполняет программу…' : 'Загружаем среду Python…');
+    } });
+    runRef.current = execution;
+    try {
+      const result = await execution.promise;
+      if (runRef.current !== execution) return;
+      setOutput(result.output);
+      if (result.status === 'completed' && isRobotSnapshot(result.value) && validRobotPath(level, result.value)) {
+        setSnapshot(result.value); setStep(result.value.path.length - 1);
+        const passed = robotSolved(level, result.value);
+        setSolved(passed);
+        setFeedback(passed ? `Маршрут выполнен. Перемещений: ${result.value.path.length - 1}. Все кристаллы собраны, бот на финише.` : `Программа завершилась. Осталось кристаллов: ${result.value.gems.length}. ${result.value.position[0] === level.goal[0] && result.value.position[1] === level.goal[1] ? 'Финиш достигнут.' : 'Бот ещё не на финише.'} Проверь маршрут.`);
       } else {
-        newSnake.pop();
+        setFeedback(result.error || (result.status === 'cancelled' ? 'Вычисление остановлено. Код сохранён.' : result.status === 'timeout' ? 'Время выполнения истекло. Проверь цикл и запусти снова.' : 'Не удалось выполнить маршрут. Попробуй запустить ещё раз.'));
       }
-
-      setSnake(newSnake);
-    };
-
-    const interval = setInterval(moveSnake, 200);
-    return () => clearInterval(interval);
-  }, [snake, direction, food, isPaused, gameOver]);
-
-  const resetGame = () => {
-    setSnake([{ x: 10, y: 10 }]);
-    setFood({ x: 5, y: 5 });
-    setDirection({ x: 0, y: -1 });
-    setGameOver(false);
-    setScore(0);
-    setIsPaused(true);
-    setLogs(["Игра сброшена. Введите команду."]);
+    } catch (error) { if (runRef.current === execution) setFeedback(error instanceof Error ? error.message : 'Не удалось загрузить Python. Проверь сеть и повтори запуск.'); }
+    finally { if (runRef.current === execution) { runRef.current = null; setRunning(false); } }
   };
+  const position = snapshot.path[step] || level.start;
+  const collected = snapshot.path.slice(0, step + 1);
+  return <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,1fr)]">
+    <div className={panel}><h2 className="text-xl font-bold text-white">{level.title}</h2><p className="mt-2 leading-relaxed text-slate-300">{level.description}</p><label htmlFor="robot-code" className="mb-2 mt-5 block text-sm font-medium text-slate-200">Код Python</label><textarea id="robot-code" value={code} onChange={event => { setCode(event.target.value); setSolved(false); setFeedback('Код изменён. Запусти его, чтобы проверить новый маршрут.'); }} spellCheck={false} className="min-h-64 w-full resize-y rounded-lg border border-white/20 bg-[#080f0d] p-3 font-mono text-sm leading-relaxed text-emerald-100 focus:border-emerald-300 focus:outline-none" autoCapitalize="off" autoComplete="off" autoCorrect="off" /><p className="mt-2 text-xs text-slate-400">{saved ? 'Черновик этого задания сохранён в браузере.' : 'Браузер не разрешил сохранить черновик. Скопируй код перед уходом.'}</p><div className="mt-4 flex flex-wrap gap-3"><button onClick={() => void run()} disabled={running} className={primaryButton}><Play size={16} /> {running ? 'Выполняется…' : 'Запустить Python'}</button>{running && <button className={button} onClick={() => runRef.current?.cancel()}><Square size={16} /> Остановить</button>}<button className={button} disabled={running} onClick={() => { setSnapshot(initialState); setStep(0); setSolved(false); setFeedback('Поле сброшено. Код сохранён.'); }}><RotateCcw size={16} /> Сбросить поле</button></div><div role="status" className="mt-5 border-t border-white/15 pt-4"><p className={solved ? 'text-emerald-200' : 'whitespace-pre-wrap text-slate-200'}>{feedback}</p>{output && <><h3 className="mb-2 mt-4 text-sm font-bold text-white">Вывод программы</h3><pre className="max-h-48 overflow-auto whitespace-pre-wrap text-sm text-slate-300">{output}</pre></>}{solved && levelIndex < ROBOT_LEVELS.length - 1 && <button onClick={onNext} className={`${primaryButton} mt-4`}>Следующий маршрут <ArrowRight size={16} /></button>}</div></div>
+    <div className={panel}><p className="mb-4 text-sm text-slate-300">Старт ({level.start.join(', ')}), финиш ({level.goal.join(', ')}). Бот: ({position.join(', ')}).</p><div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${level.size}, minmax(0, 1fr))` }} role="img" aria-label={`Поле ${level.size} на ${level.size}, бот в ${position.join(', ')}, стены: ${level.walls.map(p => p.join(',')).join('; ')}, кристаллы: ${level.gems.map(p => p.join(',')).join('; ')}, финиш: ${level.goal.join(', ')}`}>{Array.from({ length: level.size ** 2 }, (_, index) => { const x = index % level.size, y = Math.floor(index / level.size); const wall = level.walls.some(p => p[0] === x && p[1] === y); const bot = position[0] === x && position[1] === y; const gem = level.gems.some(p => p[0] === x && p[1] === y) && !collected.some(p => p[0] === x && p[1] === y); const goal = level.goal[0] === x && level.goal[1] === y; return <div key={index} className={`flex aspect-square items-center justify-center rounded ${wall ? 'bg-slate-500' : goal ? 'border-2 border-emerald-300 bg-emerald-400/10' : 'bg-[#080f0d]'}`} aria-hidden="true">{bot ? <Bot className="text-emerald-200" size={24} /> : gem ? <Gem className="text-amber-200" size={20} /> : goal ? <Circle size={18} className="text-emerald-300" /> : null}</div>; })}</div><div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-300"><span className="inline-flex items-center gap-1"><Bot size={16} /> Бот</span><span className="inline-flex items-center gap-1"><Gem size={16} /> Кристалл</span><span className="inline-flex items-center gap-1"><Circle size={16} /> Финиш</span><span>Серый квадрат — стена</span></div>{snapshot.path.length > 1 && <div className="mt-5"><label htmlFor="robot-step" className="text-sm text-slate-200">По шагам: {step} из {snapshot.path.length - 1}</label><input id="robot-step" type="range" min={0} max={snapshot.path.length - 1} value={step} onChange={event => setStep(Number(event.target.value))} className="mt-2 min-h-11 w-full accent-emerald-400" /><p className="text-xs leading-relaxed text-slate-400">Передвинь ползунок или используй стрелки, чтобы проверить путь.</p></div>}<details className="mt-5 text-sm text-slate-300"><summary className="min-h-11 cursor-pointer py-3 font-medium text-emerald-300">Подсказка</summary><p className="leading-relaxed">Один вызов move_right() сдвигает на одну клетку вправо; остальные команды работают так же. Сначала посчитай клетки. Повторяющиеся команды можно поместить в for. Координата y растёт вниз.</p></details></div>
+  </div>;
+}
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto">
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-display font-bold mb-4 flex items-center justify-center gap-4 text-emerald-400">
-          <RotateCcw className="w-10 h-10" />
-          <TextReveal text="Python Snake" delay={0.1} />
-        </h1>
-        <p className="text-white/50 text-xl">Управляйте змейкой с помощью команд Python: <code className="text-emerald-400">snake.move_up()</code>, <code className="text-emerald-400">move_down()</code> и т.д.</p>
-      </div>
+const PAIRS = [['Список', '[1, 2, 3]'], ['Словарь', '{"name": "Ada"}'], ['Определение функции', 'def greet():\n    return 1'], ['Строка', '"Hello"'], ['Целое число', '42'], ['Булево значение', 'True']];
+function shuffledCards() { return PAIRS.flatMap((pair, pairId) => pair.map((text, side) => ({ id: pairId * 2 + side, pairId, text }))).map(card => ({ card, order: Math.random() })).sort((a, b) => a.order - b.order).map(item => item.card); }
+function MatchGame() {
+  const [cards, setCards] = useState(shuffledCards);
+  const [open, setOpen] = useState<number[]>([]);
+  const [matched, setMatched] = useState<number[]>([]);
+  const [attempts, setAttempts] = useState(0);
+  const [feedback, setFeedback] = useState('Открой две карточки. Найди понятие и соответствующий пример.');
+  const lock = useRef(false);
+  const choose = (id: number) => {
+    if (lock.current || open.includes(id) || matched.includes(id)) return;
+    const next = [...open, id];
+    setOpen(next);
+    if (next.length < 2) return;
+    lock.current = true; setAttempts(count => count + 1);
+    const first = cards.find(card => card.id === next[0])!, second = cards.find(card => card.id === id)!;
+    if (first.pairId === second.pairId) { setMatched(previous => [...previous, ...next]); setFeedback(`Верно: ${PAIRS[first.pairId][0]} — ${PAIRS[first.pairId][1]}.`); }
+    else setFeedback('Это разные понятия. Запомни карточки и попробуй другую пару.');
+  };
+  const done = matched.length === cards.length;
+  return <section className="max-w-3xl"><p className="mb-5 leading-relaxed text-slate-300">Цель — узнавать синтаксис основных значений. Открывай две карточки и соединяй понятие с примером. Время не ограничено.</p><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{cards.map((card, index) => { const visible = open.includes(card.id) || matched.includes(card.id); return <button key={card.id} onClick={() => choose(card.id)} disabled={matched.includes(card.id) || (lock.current && !visible)} aria-label={visible ? card.text : `Открыть карточку ${index + 1}`} className={`${button} min-h-24 break-words ${visible ? 'border-emerald-300 bg-emerald-400/10' : ''}`}>{visible ? card.text : index + 1}{matched.includes(card.id) && <Check size={16} className="shrink-0" />}</button>; })}</div><div role="status" className={`${panel} mt-5`}><p className="text-slate-200">{feedback}</p><p className="mt-3 text-sm text-slate-300">Найдено пар: {matched.length / 2} из {PAIRS.length}. Попыток: {attempts}.</p>{done ? <><h2 className="mt-4 text-xl font-bold text-emerald-200">Все пары найдены</h2><p className="mt-2 text-slate-300">Теперь создай свои список и словарь в песочнице.</p><button className={`${button} mt-4`} onClick={() => { lock.current = false; setCards(shuffledCards()); setOpen([]); setMatched([]); setAttempts(0); setFeedback('Открой две карточки.'); }}>Повторить</button></> : open.length === 2 && <button className={`${primaryButton} mt-4`} onClick={() => { lock.current = false; setOpen([]); setFeedback('Выбери следующую пару.'); }}>Продолжить</button>}</div></section>;
+}
 
-      <div className="grid lg:grid-cols-12 gap-8">
-        {}
-        <div className="lg:col-span-7">
-          <div className={`glass rounded-[40px] p-8 border border-white/10 relative overflow-hidden bg-[#080d10] aspect-square flex items-center justify-center transition-colors duration-300 ${snakeFlash === 'error' ? 'bg-red-500/20 animate-shake' : ''}`}>
-            <div className="grid grid-cols-20 grid-rows-20 w-full h-full gap-1">
-              {[...Array(gridSize * gridSize)].map((_, i) => {
-                const x = i % gridSize;
-                const y = Math.floor(i / gridSize);
-                const isSnake = snake.some(s => s.x === x && s.y === y);
-                const isHead = snake[0].x === x && snake[0].y === y;
-                const isFood = food.x === x && food.y === y;
-
-                return (
-                  <div 
-                    key={i} 
-                    className={`rounded-sm transition-all duration-200 ${isHead ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] z-10' : isSnake ? 'bg-emerald-600/60' : isFood ? 'bg-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.6)]' : 'bg-white/5'}`}
-                  />
-                );
-              })}
-            </div>
-
-            <AnimatePresence>
-              {(isPaused || gameOver) && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-20"
-                >
-                  {gameOver ? (
-                    <>
-                      <Skull className="w-20 h-20 text-red-500 mb-6" />
-                      <h2 className="text-4xl font-bold mb-2">Game Over</h2>
-                      <p className="text-white/50 text-xl mb-8">Счет: {score}</p>
-                      <button onClick={resetGame} className="px-8 py-4 bg-emerald-500 text-black rounded-full font-bold text-lg hover:scale-105 transition-all">Играть снова</button>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-20 h-20 text-emerald-400 mb-6" />
-                      <button onClick={() => setIsPaused(false)} className="px-12 py-5 bg-emerald-500 text-black rounded-full font-bold text-2xl hover:scale-105 transition-all shadow-[0_0_30px_rgba(16,185,129,0.4)]">Начать</button>
-                    </>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <div className="glass rounded-[40px] p-8 border border-white/10 bg-black/60 flex flex-col h-[400px]">
-            <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-              <Terminal className="w-5 h-5 text-emerald-400" />
-              <span className="text-xs font-bold uppercase tracking-widest text-white/40">Python Console</span>
-            </div>
-            <div className="flex-grow overflow-y-auto font-mono text-sm space-y-2 scrollbar-thin scrollbar-thumb-white/10 pr-2">
-              {logs.map((log, i) => (
-                <div key={i} className={log.startsWith('>>>') ? 'text-brand-primary' : log.includes('Error') ? 'text-red-400' : 'text-emerald-400/60'}>
-                  {log}
-                </div>
-              ))}
-            </div>
-            <form onSubmit={handleCommand} className="mt-6 relative">
-              <input aria-label="Команда"
-                type="text"
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                placeholder="snake.move_up()..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 font-mono text-emerald-400 focus:outline-none focus:border-emerald-500/50 transition-all"
-              />
-              <Code2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
-            </form>
-          </div>
-
-          <div className="glass rounded-[40px] p-8 border border-white/10">
-            <div className="flex justify-between items-center mb-6">
-              <div className="text-white/40 text-xs uppercase tracking-widest">Текущий счет</div>
-              <div className="text-3xl font-bold text-emerald-400">{score}</div>
-            </div>
-            <div className="space-y-3">
-              <div className="text-[11px] text-white/50 uppercase tracking-widest mb-2">Доступные команды:</div>
-              <div className="grid grid-cols-2 gap-2">
-                {['move_up()', 'move_down()', 'move_left()', 'move_right()'].map(cmd => (
-                  <code key={cmd} className="bg-white/5 p-2 rounded-lg text-[11px] text-emerald-400/60 text-center">snake.{cmd}</code>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
+function SnakeGame() {
+  const [state, setState] = useState(newSnake);
+  const [direction, setDirection] = useState<Direction>('right');
+  const [steps, setSteps] = useState(1);
+  const move = (selectedDirection: Direction, count = 1) => setState(previous => advanceSnake(previous, selectedDirection, count));
+  const won = state.gems.length === 0;
+  return <section className="max-w-4xl"><p className="mb-5 max-w-3xl leading-relaxed text-slate-300">Цель — спланировать последовательность действий. Это пошаговая игра с четырьмя командами направления, а не интерпретатор Python. Выбери направление и число шагов. Собери три кристалла, избегая границы и собственного хвоста. Без таймера.</p><div className="grid items-start gap-5 md:grid-cols-2"><div className={panel}><div className="grid grid-cols-6 gap-1" role="img" aria-label={`Поле 6 на 6, голова змейки в ${state.body[0].join(', ')}, кристаллов осталось ${state.gems.length}`}>{Array.from({ length: 36 }, (_, index) => { const x = index % 6, y = Math.floor(index / 6); const head = state.body[0][0] === x && state.body[0][1] === y; const body = state.body.some(p => p[0] === x && p[1] === y); const gem = state.gems.some(p => p[0] === x && p[1] === y); return <div key={index} aria-hidden="true" className={`flex aspect-square items-center justify-center rounded ${head ? 'bg-emerald-300 text-[#08130e]' : body ? 'bg-emerald-700' : 'bg-[#080f0d]'}`}>{head ? <Bot size={22} /> : gem ? <Gem size={20} className="text-amber-200" /> : null}</div>; })}</div><p className="mt-4 text-sm text-slate-300">Выполнено перемещений: {state.moves}. Собрано: {3 - state.gems.length} из 3.</p></div><div className={panel}><label className="block text-sm text-slate-200" htmlFor="snake-direction">Направление</label><select id="snake-direction" value={direction} onChange={event => setDirection(event.target.value as Direction)} className="mt-2 min-h-11 w-full rounded-lg border border-white/20 bg-[#080f0d] px-3 text-white"><option value="right">Вправо</option><option value="down">Вниз</option><option value="left">Влево</option><option value="up">Вверх</option></select><label className="mb-2 mt-4 block text-sm text-slate-200" htmlFor="snake-steps">Сколько шагов: {steps}</label><input id="snake-steps" type="range" min={1} max={5} value={steps} onChange={event => setSteps(Number(event.target.value))} className="min-h-11 w-full accent-emerald-400" /><button disabled={state.failed || won} onClick={() => move(direction, steps)} className={`${primaryButton} mt-3 w-full`}>Выполнить команду</button><div className="mt-5 grid grid-cols-3 gap-2" aria-label="Один шаг"><span /><button className={button} onClick={() => move('up')} disabled={state.failed || won} aria-label="Один шаг вверх"><ArrowUp size={20} /></button><span /><button className={button} onClick={() => move('left')} disabled={state.failed || won} aria-label="Один шаг влево"><ArrowLeft size={20} /></button><button className={button} onClick={() => move('down')} disabled={state.failed || won} aria-label="Один шаг вниз"><ArrowDown size={20} /></button><button className={button} onClick={() => move('right')} disabled={state.failed || won} aria-label="Один шаг вправо"><ArrowRight size={20} /></button></div><p className={`mt-5 leading-relaxed ${won ? 'text-emerald-200' : state.failed ? 'text-rose-200' : 'text-slate-300'}`} role="status">{won ? 'Все кристаллы собраны. Маршрут завершён. Попробуй записать повторяющиеся команды циклом в игре «Бот-кодер».' : state.failed ? `${state.message} Проверь клетку перед головой и повтори маршрут с начала.` : 'Змейка ждёт команды. Игра движется только после твоего действия.'}</p><button className={`${button} mt-4`} onClick={() => setState(newSnake())}><RotateCcw size={16} /> Начать заново</button></div></div></section>;
+}

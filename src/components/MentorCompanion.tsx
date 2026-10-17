@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { playSound } from '../utils/sounds';
 import { askMentorAnonymously, getMentorChat, getMentorHint, type MentorSource } from '../services/gemini';
-import { SUGGESTED_QUESTIONS } from '../constants/mentor-knowledge';
+import { useDialogFocus } from './Dialog';
+import { SUGGESTED_QUESTIONS } from '../constants/mentor-suggestions';
 
 interface Turn {
   id: string;
@@ -20,7 +21,7 @@ interface Turn {
 }
 
 const WELCOME =
-  'Привет! Я помогу разобраться с Python. Спросите про списки, циклы, функции или вставьте текст ошибки — ' +
+  'Привет! Я помогу разобраться с Python. Спроси про списки, циклы, функции или вставь текст ошибки — ' +
   'я объясню, что она значит.';
 
 /**
@@ -53,7 +54,9 @@ const RichText = ({ text }: { text: string }) => {
 
         return (
           <p key={index} className="whitespace-pre-wrap text-sm leading-relaxed text-ink-70">
-            {segment.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, partIndex) => {
+            {segment.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^\s)]+\))/g).map((part, partIndex) => {
+              const link = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+              if (link) return <a key={partIndex} href={link[2]} target="_blank" rel="noopener noreferrer" className="mentor-source-link">{link[1]}</a>;
               if (part.startsWith('**') && part.endsWith('**')) {
                 return (
                   <strong key={partIndex} className="font-semibold text-ink-100">
@@ -104,7 +107,7 @@ export const MentorCompanion = React.memo(() => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useDialogFocus(isOpen, () => setIsOpen(false));
 
   const nextId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -144,7 +147,8 @@ export const MentorCompanion = React.memo(() => {
 
   const requireLogin = (): boolean => {
     if (currentUser) return false;
-    toast.error('Войдите в аккаунт, чтобы спросить ментора.');
+    toast.error('Войди в аккаунт, чтобы спросить наставника.');
+    setIsOpen(false);
     window.dispatchEvent(new CustomEvent('open-auth-modal'));
     return true;
   };
@@ -185,8 +189,8 @@ export const MentorCompanion = React.memo(() => {
     } catch (error) {
       pushMentorTurn({
         text:
-          'Не удалось связаться с сервером. Проверьте соединение и попробуйте ещё раз — ' +
-          'ваш вопрос никуда не делся.',
+          'Не удалось связаться с сервером. Проверь соединение и попробуй ещё раз — ' +
+          'твой вопрос остался в переписке.',
         source: 'offline',
       });
       console.error('Mentor chat failed:', error);
@@ -199,7 +203,7 @@ export const MentorCompanion = React.memo(() => {
   const requestHint = async () => {
     if (isBusy) return;
     if (!currentChallenge) {
-      toast.error('Откройте задачу — тогда я смогу подсказать по ней.');
+      toast.error('Открой задачу — тогда я смогу подсказать по ней.');
       return;
     }
     if (requireLogin()) return;
@@ -215,7 +219,7 @@ export const MentorCompanion = React.memo(() => {
       pushMentorTurn(reply);
       playSound('success');
     } catch (error) {
-      pushMentorTurn({ text: 'Не получилось получить подсказку. Попробуйте ещё раз.', source: 'offline' });
+      pushMentorTurn({ text: 'Не получилось получить подсказку. Попробуй ещё раз.', source: 'offline' });
       console.error('Mentor hint failed:', error);
     } finally {
       setIsBusy(false);
@@ -232,7 +236,7 @@ export const MentorCompanion = React.memo(() => {
   const reviewCode = async () => {
     if (isBusy) return;
     if (!currentCode || currentCode.trim().length < 5) {
-      toast.error('Напишите немного кода, и я его разберу.');
+      toast.error('Напиши немного кода, и я его разберу.');
       return;
     }
     if (requireLogin()) return;
@@ -247,7 +251,7 @@ export const MentorCompanion = React.memo(() => {
       pushMentorTurn(reply);
       playSound('success');
     } catch (error) {
-      pushMentorTurn({ text: 'Не получилось разобрать код. Попробуйте ещё раз.', source: 'offline' });
+      pushMentorTurn({ text: 'Не получилось разобрать код. Попробуй ещё раз.', source: 'offline' });
       console.error('Mentor review failed:', error);
     } finally {
       setIsBusy(false);
@@ -255,18 +259,18 @@ export const MentorCompanion = React.memo(() => {
   };
 
   return (
-    <div className="fixed bottom-8 right-8 z-[100]">
+    <div className="fixed bottom-4 right-4 z-[160]">
       <AnimatePresence>
         {isOpen && (
           <motion.div
             ref={panelRef}
             role="dialog"
-            aria-label="ИИ-ментор"
+            aria-label="Наставник Python" aria-modal="true" tabIndex={-1}
             initial={{ opacity: 0, scale: 0.94, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-            className="glass glass-lit absolute bottom-24 right-0 flex max-h-[min(640px,80vh)] w-[min(440px,calc(100vw-4rem))] flex-col overflow-hidden rounded-[28px] shadow-[0_30px_100px_-30px_rgba(0,0,0,0.9)]"
+            className="glass glass-lit absolute bottom-0 right-0 flex max-h-[min(640px,calc(100dvh-96px))] w-[min(440px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[28px] shadow-[0_30px_100px_-30px_rgba(0,0,0,0.9)]"
           >
             <header className="flex items-center justify-between border-b border-hairline px-6 py-5">
               <div className="flex items-center gap-3.5">
@@ -274,14 +278,14 @@ export const MentorCompanion = React.memo(() => {
                   <GraduationCap className="h-5 w-5 text-emerald-300" aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold tracking-tight">Ментор</h2>
+                  <h2 className="text-base font-semibold tracking-tight">Наставник</h2>
                   <p className="text-[11px] text-ink-30">Помощь по Python</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                aria-label="Закрыть ментора"
+                aria-label="Закрыть наставника"
                 className="rounded-xl p-2 text-ink-30 transition-colors hover:bg-white/5 hover:text-ink-100"
               >
                 <X className="h-4.5 w-4.5" aria-hidden="true" />
@@ -295,7 +299,7 @@ export const MentorCompanion = React.memo(() => {
                     <p className="text-sm leading-relaxed text-ink-70">{WELCOME}</p>
                   </div>
                   <div className="space-y-2">
-                    <p className="type-eyebrow">попробуйте спросить</p>
+                    <p className="type-eyebrow">попробуй спросить</p>
                     {SUGGESTED_QUESTIONS.map((question) => (
                       <button
                         key={question}
@@ -340,7 +344,7 @@ export const MentorCompanion = React.memo(() => {
               {isBusy && (
                 <div className="flex items-center gap-2.5 text-ink-30" role="status">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                  <span className="text-xs">Думаю…</span>
+                  <span className="text-xs">Ищу ответ…</span>
                 </div>
               )}
             </div>
@@ -375,7 +379,7 @@ export const MentorCompanion = React.memo(() => {
                 className="relative"
               >
                 <label htmlFor="mentor-question" className="sr-only">
-                  Вопрос ментору
+                  Вопрос наставнику
                 </label>
                 <input
                   id="mentor-question"
@@ -384,7 +388,7 @@ export const MentorCompanion = React.memo(() => {
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   disabled={isBusy}
-                  placeholder="Спросите что-нибудь про Python…"
+                  placeholder="Спроси что-нибудь про Python…"
                   className="w-full rounded-2xl border border-hairline bg-white/[0.04] py-3.5 pl-4 pr-12 text-sm transition-colors focus:border-emerald-400/50 focus:outline-none disabled:opacity-50"
                 />
                 <button
@@ -401,30 +405,7 @@ export const MentorCompanion = React.memo(() => {
         )}
       </AnimatePresence>
 
-      <motion.button
-        type="button"
-        whileHover={{ scale: 1.06 }}
-        whileTap={{ scale: 0.94 }}
-        onClick={() => {
-          setIsOpen((open) => !open);
-          playSound('click');
-        }}
-        aria-expanded={isOpen}
-        aria-label={isOpen ? 'Закрыть ментора' : 'Открыть ментора'}
-        className={`relative flex h-14 w-14 items-center justify-center rounded-full border transition-colors ${
-          isOpen
-            ? 'border-emerald-400/60 bg-emerald-400/20'
-            : 'border-hairline bg-surface-2/80 backdrop-blur-md hover:border-emerald-400/40'
-        }`}
-      >
-        <GraduationCap
-          className={`h-6 w-6 transition-colors ${isOpen ? 'text-emerald-300' : 'text-ink-50'}`}
-          aria-hidden="true"
-        />
-        {hasUnread && (
-          <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-bg-dark bg-emerald-400" />
-        )}
-      </motion.button>
+
     </div>
   );
 });
