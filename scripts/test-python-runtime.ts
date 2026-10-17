@@ -89,6 +89,11 @@ check('stdin runs once and missing stdin gives actionable EOFError', () => {
   assert.equal(missing.output, 'один раз\n');
   assert.match(missing.error!, /EOFError.*входных строк/);
 });
+check('input prompt remains part of stdout during task verification', () => {
+  const code='name = input("Имя: ")\nprint(name)';
+  assert.equal(evaluate({code,tests:[{stdin:['Ада'],expectedOutput:'Ада'}]}).passed,false);
+  assert.equal(evaluate({code,tests:[{stdin:['Ада'],expectedOutput:'Имя: Ада'}]}).passed,true);
+});
 check('different test cases get fresh namespaces', () => {
   const result = evaluate({ code: 'counter = globals().get("counter", 0) + 1\nprint(counter)', tests: [{ expectedOutput: '1' }, { expectedOutput: '1' }] });
   assert.equal(result.passed, true);

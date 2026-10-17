@@ -1,0 +1,14 @@
+import {readdir,writeFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
+import type {CourseModule} from '../src/course/types';
+const ORDER=['output','foundations','arithmetic','conditions','loops','strings','sequences','mappings','functions','debugging','data','projects','oop','iterators','decorators','async-python','sql-python','tooling'];
+const files=(await readdir('src/course/modules')).filter(f=>f.endsWith('.ts')&&!f.startsWith('_'));
+const modules:CourseModule[]=await Promise.all(files.map(async file=>(await import(pathToFileURL(resolve('src/course/modules',file)).href)).default));
+modules.sort((a,b)=>ORDER.indexOf(a.id)-ORDER.indexOf(b.id));
+const index=modules.map(m=>({id:m.id,title:m.title,goal:m.goal,track:m.track,depth:m.depth,prerequisites:m.prerequisites,lessons:m.lessons.map(l=>({id:l.id,title:l.title,goal:l.goal,role:l.role,prerequisites:l.prerequisites,estimatedMinutes:l.estimatedMinutes,steps:l.steps.map(s=>({id:s.id,title:s.title})),examples:l.steps.reduce((n,s)=>n+s.examples.length,0),tasks:l.exercises.map(t=>({id:t.id,title:t.title,kind:t.kind,required:t.required!==false}))}))}));
+await writeFile('src/course/index.generated.ts',"import type {ModuleIndex} from './metadata';\n// Generated from authored modules. No prose, test inputs or solutions in this index.\nexport const COURSE_INDEX:ModuleIndex[] = "+JSON.stringify(index,null,2)+';\n');
+console.log('Course metadata:',modules.length,'modules;',index.reduce((n,m)=>n+m.lessons.length,0),'lessons');
+const base=index.filter(m=>m.track==='base'),advanced=index.filter(m=>m.track==='advanced');
+const summary={baseModules:base.length,baseLessons:base.reduce((n,m)=>n+m.lessons.length,0),baseExercises:base.reduce((n,m)=>n+m.lessons.reduce((n,l)=>n+l.tasks.length,0),0),baseCoding:base.reduce((n,m)=>n+m.lessons.reduce((n,l)=>n+l.tasks.filter(t=>t.kind==='code').length,0),0),baseProjects:base.reduce((n,m)=>n+m.lessons.filter(l=>l.role==='project').length,0),finals:base.reduce((n,m)=>n+m.lessons.filter(l=>l.role==='final').length,0),advancedModules:advanced.length,advancedLessons:advanced.reduce((n,m)=>n+m.lessons.length,0),advancedExercises:advanced.reduce((n,m)=>n+m.lessons.reduce((n,l)=>n+l.tasks.length,0),0),firstLessonUrl:base[0]?.lessons[0]?'/learn/'+base[0].id+'/'+base[0].lessons[0].id:'/pathways'};
+await writeFile('src/course/summary.generated.ts','// Generated counts only; no course text in the home bundle.\nexport const COURSE_SUMMARY = '+JSON.stringify(summary,null,2)+';\n');

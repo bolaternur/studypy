@@ -107,8 +107,7 @@ async def _sp_run_case(test, testing=False):
     values = iter(test.get('stdin', []))
 
     def read_input(prompt=''):
-        if not testing:
-            out.write(str(prompt))
+        out.write(str(prompt))
         try:
             return str(next(values))
         except StopIteration:

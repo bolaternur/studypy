@@ -1,10 +1,11 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Keyboard, RotateCcw } from 'lucide-react';
 import { TYPING_LEVELS, type TypingLevel } from '../games/typing-levels';
 import { applyTypingInput, keyHint, LEGACY_TYPING_SETTINGS_KEY, newTypingSession, nextUnfinishedTypingLevel, recordTypingCompletion, restoreTypingDraft, sanitizeTypingProgress, sanitizeTypingSettings, typingDraft, typingMetrics, TYPING_DRAFT_PREFIX, TYPING_PROGRESS_KEY, TYPING_SETTINGS_KEY, type TypingProgress, type TypingSession, type TypingSettings } from '../games/typing';
 import { playSound } from '../utils/sounds';
 import './TypingTrainer.css';
+const TypingLearning=lazy(()=>import('../course/TypingLearning').then(m=>({default:m.TypingLearning})));
 
 function stored(key: string): unknown { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } }
 function readSettings(): TypingSettings { return sanitizeTypingSettings(stored(TYPING_SETTINGS_KEY) ?? stored(LEGACY_TYPING_SETTINGS_KEY)); }
@@ -15,6 +16,7 @@ const printable = (character: string) => character === ' ' ? 'пробел' : ch
 const elapsed = (milliseconds: number) => `${Math.floor(milliseconds / 60000)}:${String(Math.floor(milliseconds / 1000) % 60).padStart(2, '0')}`;
 
 export function TypingTrainer() {
+  const [learning,setLearning]=useState(false);
   const [settings, setSettings] = useState(readSettings);
   const [progress, setProgress] = useState<TypingProgress>(() => sanitizeTypingProgress(stored(TYPING_PROGRESS_KEY)));
   const [catalogOpen, setCatalogOpen] = useState(() => window.matchMedia('(min-width: 960px)').matches);
@@ -45,7 +47,7 @@ export function TypingTrainer() {
           </details>)}
         </nav>
       </details>
-      <LevelPractice key={selectedId} level={selected} settings={settings} record={progress.levels[selectedId]} onToggleKeyboard={() => setSettings(previous => ({ ...previous, keyboard: !previous.keyboard }))} onComplete={session => setProgress(previous => recordTypingCompletion(previous, selectedId, session, new Date().toISOString()))} onNext={nextId ? () => selectLevel(nextId) : undefined} />
+      <div><details className="course-learning-links" onToggle={event=>setLearning(event.currentTarget.open)}><summary>Разобрать код и перейти к самостоятельной практике</summary>{learning&&<Suspense fallback={<p role="status">Загрузка учебного разбора…</p>}><TypingLearning key={selectedId} level={selected}/></Suspense>}</details><LevelPractice key={selectedId} level={selected} settings={settings} record={progress.levels[selectedId]} onToggleKeyboard={() => setSettings(previous => ({ ...previous, keyboard: !previous.keyboard }))} onComplete={session => setProgress(previous => recordTypingCompletion(previous, selectedId, session, new Date().toISOString()))} onNext={nextId ? () => selectLevel(nextId) : undefined} /></div>
     </div>
     {!saved && <p className="typing-storage-error" role="status">Браузер не сохранил прогресс. Набор продолжает работать; проверь доступ к хранилищу сайта.</p>}
     <p className="typing-code-note">Это упражнение на набор, а не проверка знания Python. Код здесь не выполняется. Чтобы писать решения самостоятельно, переходи в <Link to="/pathways">программу обучения</Link>.</p>

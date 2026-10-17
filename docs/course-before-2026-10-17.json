@@ -1,0 +1,947 @@
+[
+  {
+    "id": "intro",
+    "title": "Первая программа",
+    "headings": [
+      "Первая программа",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 5,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "variables",
+    "title": "Переменные",
+    "headings": [
+      "Переменные",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "type-conversion",
+    "title": "Типы и преобразование",
+    "headings": [
+      "Типы и преобразование",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "math",
+    "title": "Арифметика",
+    "headings": [
+      "Арифметика",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 3,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "input",
+    "title": "Ввод данных",
+    "headings": [
+      "Ввод данных",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "booleans",
+    "title": "Сравнения и логика",
+    "headings": [
+      "Сравнения и логика",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "if-else",
+    "title": "Условия if/else",
+    "headings": [
+      "Условия if/else",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "loops",
+    "title": "Циклы for и while",
+    "headings": [
+      "Циклы for и while",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "lists",
+    "title": "Списки",
+    "headings": [
+      "Списки",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "tuples",
+    "title": "Кортежи",
+    "headings": [
+      "Кортежи",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "dictionaries",
+    "title": "Словари",
+    "headings": [
+      "Словари",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 3,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "sets",
+    "title": "Множества",
+    "headings": [
+      "Множества",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "strings",
+    "title": "Строки",
+    "headings": [
+      "Строки",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 3,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "functions",
+    "title": "Функции и return",
+    "headings": [
+      "Функции и return",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "pep8",
+    "title": "Читаемый код: PEP 8",
+    "headings": [
+      "Читаемый код: PEP 8",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "debugger",
+    "title": "Поиск ошибок",
+    "headings": [
+      "Поиск ошибок",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 5,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "ide-setup",
+    "title": "Локальный редактор",
+    "headings": [
+      "Локальный редактор",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "modules",
+    "title": "Модули",
+    "headings": [
+      "Модули",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "packages",
+    "title": "Пакеты и импорты",
+    "headings": [
+      "Пакеты и импорты",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "virtual-env",
+    "title": "Виртуальное окружение",
+    "headings": [
+      "Виртуальное окружение",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "files",
+    "title": "Текстовые файлы",
+    "headings": [
+      "Текстовые файлы",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "exceptions",
+    "title": "Исключения",
+    "headings": [
+      "Исключения",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "list-comp",
+    "title": "Списковые включения",
+    "headings": [
+      "Списковые включения",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "lambdas",
+    "title": "Лямбда-функции",
+    "headings": [
+      "Лямбда-функции",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "filter",
+    "title": "map и filter",
+    "headings": [
+      "map и filter",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "zip",
+    "title": "zip и enumerate",
+    "headings": [
+      "zip и enumerate",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "args-kwargs",
+    "title": "*args и **kwargs",
+    "headings": [
+      "*args и **kwargs",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "regex",
+    "title": "Регулярные выражения",
+    "headings": [
+      "Регулярные выражения",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "datetime",
+    "title": "Даты и время",
+    "headings": [
+      "Даты и время",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "os-pathlib",
+    "title": "Пути и pathlib",
+    "headings": [
+      "Пути и pathlib",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "git",
+    "title": "Git: история изменений",
+    "headings": [
+      "Git: история изменений",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "requests",
+    "title": "HTTP и Requests",
+    "headings": [
+      "HTTP и Requests",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "classes",
+    "title": "Классы и объекты",
+    "headings": [
+      "Классы и объекты",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "magic-methods",
+    "title": "Специальные методы",
+    "headings": [
+      "Специальные методы",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "inheritance",
+    "title": "Наследование",
+    "headings": [
+      "Наследование",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "polymorphism",
+    "title": "Общее поведение объектов",
+    "headings": [
+      "Общее поведение объектов",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "encapsulation",
+    "title": "Интерфейс и внутреннее состояние",
+    "headings": [
+      "Интерфейс и внутреннее состояние",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "properties",
+    "title": "Свойства @property",
+    "headings": [
+      "Свойства @property",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "closures",
+    "title": "Замыкания",
+    "headings": [
+      "Замыкания",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "decorators",
+    "title": "Декораторы",
+    "headings": [
+      "Декораторы",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "iterators",
+    "title": "Итераторы",
+    "headings": [
+      "Итераторы",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "generators",
+    "title": "Генераторы",
+    "headings": [
+      "Генераторы",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "context",
+    "title": "Контекстные менеджеры",
+    "headings": [
+      "Контекстные менеджеры",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "serialization",
+    "title": "JSON и сериализация",
+    "headings": [
+      "JSON и сериализация",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "pytest",
+    "title": "Проверки функций и pytest",
+    "headings": [
+      "Проверки функций и pytest",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "logging",
+    "title": "Диагностические сообщения",
+    "headings": [
+      "Диагностические сообщения",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "sql",
+    "title": "SQL и SQLite",
+    "headings": [
+      "SQL и SQLite",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "algorithms",
+    "title": "Поиск и сложность",
+    "headings": [
+      "Поиск и сложность",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 2,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "type-hinting",
+    "title": "Аннотации типов",
+    "headings": [
+      "Аннотации типов",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "async",
+    "title": "Асинхронные функции",
+    "headings": [
+      "Асинхронные функции",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "threading",
+    "title": "Потоки: возможности и ограничения",
+    "headings": [
+      "Потоки: возможности и ограничения",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "multiprocessing",
+    "title": "Отдельные процессы",
+    "headings": [
+      "Отдельные процессы",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "sockets",
+    "title": "Сетевые данные и сокеты",
+    "headings": [
+      "Сетевые данные и сокеты",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "ctypes",
+    "title": "C-данные и ctypes",
+    "headings": [
+      "C-данные и ctypes",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "memory",
+    "title": "Ссылки и копирование",
+    "headings": [
+      "Ссылки и копирование",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "gc",
+    "title": "Сборка мусора и weakref",
+    "headings": [
+      "Сборка мусора и weakref",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "ast",
+    "title": "Абстрактное синтаксическое дерево",
+    "headings": [
+      "Абстрактное синтаксическое дерево",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "dis",
+    "title": "Байткод CPython",
+    "headings": [
+      "Байткод CPython",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "profiling",
+    "title": "Измерение и профилирование",
+    "headings": [
+      "Измерение и профилирование",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "design-patterns",
+    "title": "Композиция и стратегии",
+    "headings": [
+      "Композиция и стратегии",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "metaclasses",
+    "title": "Как создаётся класс",
+    "headings": [
+      "Как создаётся класс",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "docker",
+    "title": "Docker: образ и контейнер",
+    "headings": [
+      "Docker: образ и контейнер",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  },
+  {
+    "id": "cicd",
+    "title": "Автоматические проверки: CI",
+    "headings": [
+      "Автоматические проверки: CI",
+      "Попробуй самостоятельно"
+    ],
+    "paragraphs": 4,
+    "examples": 1,
+    "codeTasks": 1,
+    "quiz": 0,
+    "explicitReview": false,
+    "explicitAssessment": false,
+    "explicitProject": false
+  }
+]

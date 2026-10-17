@@ -6,6 +6,8 @@ import { LESSON_CATALOG } from '../../constants/lesson-catalog';
 import { PythonGame } from '../../components/PythonGame';
 import { useLearningProgress } from '../../hooks/useLearningProgress';
 import { useAuth } from '../../contexts/AuthContext';
+import { LEGACY_COURSE_MODULE } from '../../course/legacy-links';
+import '../../course/course.css';
 export function RichLessonDetail({lesson}:{lesson:Lesson}) {
   const {currentUser,completeLesson}=useAuth();
   const {completed,completeLocal,remember}=useLearningProgress();
@@ -23,6 +25,7 @@ export function RichLessonDetail({lesson}:{lesson:Lesson}) {
     try{const saved=await completeLesson(lesson.id,0);setSync(saved?'saved':'failed');}catch{setSync('failed');}finally{busy.current=false;}
   };
   return <article className="page-container lesson-page">
+    <div className="course-legacy-note"><p>Это прежнее вводное знакомство с темой. Его отметка не означает прохождение нового модуля и не засчитывает новые задачи.</p><Link className="text-link" to={LEGACY_COURSE_MODULE[lesson.id]?'/learn/'+LEGACY_COURSE_MODULE[lesson.id]:'/pathways?view=advanced'}>Открыть подробную программу по теме →</Link></div>
     <Link className="back-link" to="/pathways"><ArrowLeft size={17}/> Программа обучения</Link>
     <header className="lesson-heading"><p className="muted text-sm">{lesson.topic} · {lesson.estimatedMinutes} мин{completed.includes(lesson.id)?' · Пройдено':''}</p><h1>{lesson.title}</h1><p>{lesson.description}</p><a className="text-link" href="#practice">Перейти к практике ↓</a></header>
     <div className="lesson-layout"><div className="lesson-content">

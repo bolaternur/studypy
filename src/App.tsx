@@ -16,6 +16,7 @@ import { acquireBodyScrollLock } from './utils/scrollLock';
 
 const Pathways = React.lazy(() => import('./pages/Pathways').then(m => ({ default: m.Pathways })));
 const LessonDetail = React.lazy(() => import('./pages/LessonDetail').then(m => ({ default: m.LessonDetail })));
+const CoursePage = React.lazy(() => import('./course/CoursePages').then(m => ({ default: m.CoursePage })));
 const PetPage = React.lazy(() => import('./pages/PetPage').then(m => ({ default: m.PetPage })));
 const Community = React.lazy(() => import('./pages/Community').then(m => ({ default: m.Community })));
 const Arcade = React.lazy(() => import('./pages/Arcade').then(m => ({ default: m.Arcade })));
@@ -209,6 +210,8 @@ const AppRoutes = () => {
       <Route path="/community" element={<Community />} />
       <Route path="/arcade" element={<Arcade />} />
       <Route path="/typing" element={<TypingTrainer />} />
+      <Route path="/learn/:moduleId" element={<CoursePage />} />
+      <Route path="/learn/:moduleId/:lessonId" element={<CoursePage />} />
       <Route path="/sandbox" element={<Sandbox />} />
       <Route path="/sandbox/:id" element={<Sandbox />} />
       <Route path="/collaborative" element={<Sandbox />} />

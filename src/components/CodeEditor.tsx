@@ -18,11 +18,13 @@ export interface CodeEditorProps {
   readOnly?: boolean;
   lessonId?: string;
   draftKey?: string;
+  onResult?: (result: PythonRunResult, code: string) => void;
+  persistSubmission?: boolean;
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
   initialCode, testCases = [], onSuccess, onFailure, onError, onChange, onCodeChange,
-  hideControls = false, readOnly = false, lessonId, draftKey,
+  hideControls = false, readOnly = false, lessonId, draftKey, onResult, persistSubmission = true,
 }) => {
   const fallbackKey = useRef(lessonId ? `${lessonId}:${initialCode.slice(0, 80)}:${testCases[0]?.description ?? ''}` : undefined);
   const storageKey = readOnly ? undefined : draftKey ?? fallbackKey.current;
@@ -34,6 +36,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
   const [isVisualizerOpen, setIsVisualizerOpen] = useState(false);
   const [plainEditor, setPlainEditor] = useState(false);
   const [storageError, setStorageError] = useState('');
+  const [draftError, setDraftError] = useState('');
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const { currentUser, setLastCodeResult, saveSubmission, getSubmissions } = useAuth();
@@ -81,7 +84,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
     const next = value ?? '';
     codeRef.current = next;
     setCode(next);
-    if (!writeDraft(storageKey, next)) setStorageError('Не удалось сохранить черновик на устройстве. Скопируй код перед выходом.');
+    setDraftError(writeDraft(storageKey, next) ? '' : 'Не удалось сохранить черновик на устройстве. Скопируй код перед выходом.');
     onChange?.(next);
     onCodeChange?.(next);
   }, [storageKey, onChange, onCodeChange]);
@@ -115,6 +118,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
     runRef.current = null;
     setPhase('idle');
     setResult(next);
+    onResult?.(next, submittedCode);
     const passed = next.status === 'completed' && next.passed;
     setLastCodeResult({ success: passed, message: passed ? (testCases.length ? 'Программа прошла проверку.' : 'Программа завершена.') : next.error ?? 'Проверь результат и исправь код.', timestamp: Date.now() });
     if (next.status === 'cancelled' || next.status === 'timeout') {
@@ -122,7 +126,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
       onError?.(next.error ?? 'Выполнение остановлено.');
       return;
     }
-    if (testCases.length && next.tests.length && currentUser) {
+    if (persistSubmission && testCases.length && next.tests.length && currentUser) {
       void saveSubmission(lessonId ?? 'sandbox', submittedCode, next.tests).catch(() => {
         if (aliveRef.current) setStorageError('Не удалось сохранить попытку в аккаунте. Код остаётся на устройстве.');
       });
@@ -131,6 +135,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
     else { onFailure?.(); if (next.error) onError?.(next.error); }
   };
 
+  const feedbackError = draftError || storageError;
   const editor = plainEditor ? (
     <textarea aria-label="Код Python" value={code} readOnly={readOnly}
       onChange={(event) => handleCodeChange(event.target.value)} spellCheck={false}
@@ -144,7 +149,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
   if (hideControls) return <div className="border border-white/15 rounded-lg overflow-hidden">
     <div className="h-[300px]">{editor}</div>
     <button type="button" onClick={() => setPlainEditor(!plainEditor)} className="min-h-11 px-3 text-sm text-gray-200 underline">{plainEditor ? 'Редактор с подсветкой' : 'Простой редактор'}</button>
-    {storageError && <p role="status" className="px-3 pb-3 text-xs text-amber-200">{storageError}</p>}
+    {feedbackError && <p role="status" className="px-3 pb-3 text-xs text-amber-200">{feedbackError}</p>}
   </div>;
 
   return (
@@ -153,13 +158,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
       <div className="border border-white/15 rounded-lg overflow-hidden bg-[#12191d]">
         <div className="flex flex-wrap justify-between items-center gap-2 px-3 py-2 border-b border-white/10">
           <span className="text-sm text-gray-300 font-mono">main.py</span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 max-w-full">
             <button type="button" onClick={() => setIsVisualizerOpen(true)} disabled={isRunning} className="flex items-center gap-2 min-h-11 px-3 text-sm text-teal-300 border border-teal-700 rounded-md disabled:opacity-50"><Eye size={16} aria-hidden="true" />По шагам</button>
-            {isRunning ? (
-              <button type="button" onClick={() => runRef.current?.cancel()} className="flex items-center gap-2 min-h-11 px-3 rounded-md border border-red-400 text-red-200"><Square size={16} aria-hidden="true" />Остановить</button>
-            ) : (
-              <button type="button" onClick={runCode} className="flex items-center gap-2 min-h-11 px-4 rounded-md bg-brand-primary text-black font-semibold"><Play size={16} aria-hidden="true" />{testCases.length ? 'Проверить' : 'Запустить'}</button>
-            )}
+            <button type="button" onClick={runCode} disabled={isRunning} className="flex items-center gap-2 min-h-11 px-4 rounded-md bg-brand-primary text-black font-semibold disabled:opacity-50"><Play size={16} aria-hidden="true" />{testCases.length ? 'Проверить' : 'Запустить'}</button>
+            <button type="button" disabled={!isRunning} onClick={() => runRef.current?.cancel()} className="flex items-center gap-2 min-h-11 px-3 rounded-md border border-red-400 text-red-200 disabled:opacity-35"><Square size={16} aria-hidden="true" />Остановить</button>
           </div>
         </div>
         <div className="h-[260px] md:h-[320px] relative">{editor}</div>
@@ -174,10 +176,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({
         <p className="text-xs text-gray-300 mb-2">Введи значения до запуска: по одному на строку. Программа выполнится один раз.</p>
         <textarea aria-label="Ввод для input()" value={stdin} onChange={(event) => setStdin(event.target.value)} rows={3} className="w-full bg-black/30 border border-white/20 rounded p-2 font-mono text-sm" />
       </details>}
-      {storageError && <p role="status" className="text-sm text-amber-200">{storageError}</p>}
+      {feedbackError && <p role="status" className="text-sm text-amber-200">{feedbackError}</p>}
       <section className="border border-white/15 rounded-lg overflow-hidden bg-[#080d10]" aria-label="Результат выполнения">
         <div className="flex flex-wrap border-b border-white/10">
-          {(['output', ...(testCases.length ? ['tests'] : []), 'history'] as const).map((tab) => (
+          {(['output', ...(testCases.length ? ['tests'] : []), ...(persistSubmission ? ['history'] : [])] as const).map((tab) => (
             <button type="button" key={tab} onClick={() => setActiveTab(tab as typeof activeTab)} aria-pressed={activeTab === tab}
               className={`min-h-11 px-4 text-sm border-b-2 ${activeTab === tab ? 'border-brand-primary text-brand-primary' : 'border-transparent text-gray-300'}`}>
               {tab === 'output' ? 'Вывод' : tab === 'tests' ? 'Проверки' : 'История'}
